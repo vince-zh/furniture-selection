@@ -1,0 +1,1379 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>家具选择确认表</title>
+  <meta name="description" content="对比家具候选方案、确认选项并汇总整体报价。">
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%231d3b36'/%3E%3Cpath d='M15 25h34v17H15z' fill='%23f2d6a2'/%3E%3Cpath d='M18 18h28v14H18z' fill='%23fff7df'/%3E%3Cpath d='M18 42v8M46 42v8M12 32h40' stroke='%23ffffff' stroke-width='4' stroke-linecap='round'/%3E%3C/svg%3E">
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #17201f;
+      --muted: #65706d;
+      --line: #d8dedb;
+      --paper: #f3f5f6;
+      --panel: #ffffff;
+      --panel-2: #eef4f1;
+      --green: #1d3b36;
+      --green-2: #2f6b5f;
+      --gold: #c48b36;
+      --red: #b84a3c;
+      --shadow: 0 18px 50px rgba(25, 38, 35, .12);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: var(--paper);
+      color: var(--ink);
+      min-width: 320px;
+    }
+
+    button, input, select, textarea {
+      font: inherit;
+    }
+
+    button {
+      border: 1px solid transparent;
+      border-radius: 8px;
+      cursor: pointer;
+      min-height: 40px;
+      transition: transform .15s ease, background .15s ease, border-color .15s ease;
+    }
+
+    button:hover { transform: translateY(-1px); }
+    button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible {
+      outline: 3px solid rgba(196, 139, 54, .35);
+      outline-offset: 2px;
+    }
+
+    .app {
+      min-height: 100vh;
+      display: grid;
+      grid-template-columns: 280px minmax(0, 1fr) 340px;
+    }
+
+    .sidebar, .quote {
+      background: var(--green);
+      color: #f7fbf8;
+      padding: 24px;
+      overflow: auto;
+    }
+
+    .sidebar {
+      border-right: 1px solid rgba(255,255,255,.14);
+    }
+
+    .quote {
+      background: #20312e;
+      border-left: 1px solid rgba(255,255,255,.14);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 24px;
+    }
+
+    .mark {
+      width: 42px;
+      height: 42px;
+      border-radius: 10px;
+      background: #f2d6a2;
+      color: var(--green);
+      display: grid;
+      place-items: center;
+      font-weight: 800;
+    }
+
+    h1, h2, h3, p { margin: 0; }
+
+    h1 {
+      font-size: 20px;
+      line-height: 1.2;
+    }
+
+    .subtle {
+      color: rgba(247, 251, 248, .72);
+      font-size: 14px;
+      line-height: 1.5;
+      margin-top: 6px;
+    }
+
+    .main {
+      padding: 24px;
+      overflow: auto;
+    }
+
+    .topbar {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      align-items: flex-start;
+      margin-bottom: 18px;
+    }
+
+    .topbar h2 {
+      font-size: 28px;
+      line-height: 1.15;
+      letter-spacing: 0;
+    }
+
+    .topbar p {
+      color: var(--muted);
+      margin-top: 8px;
+      line-height: 1.5;
+      max-width: 760px;
+    }
+
+    .toolbar {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    .primary {
+      background: var(--green);
+      color: white;
+      border-color: var(--green);
+      padding: 0 14px;
+    }
+
+    .secondary {
+      background: white;
+      color: var(--ink);
+      border-color: var(--line);
+      padding: 0 14px;
+    }
+
+    .danger {
+      background: #fff5f2;
+      color: var(--red);
+      border-color: #efc8bf;
+      padding: 0 12px;
+    }
+
+    .section-list {
+      display: grid;
+      gap: 12px;
+      margin-top: 18px;
+    }
+    .space-group { min-width: 0; }
+    .space-group h3 { font-size: 15px; margin: 8px 0 10px; overflow-wrap: anywhere; }
+    .space-group h3 span { display: block; font-size: 12px; font-weight: 400; opacity: .7; margin-top: 4px; }
+    .space-items { display: grid; gap: 8px; }
+    .space-quote { min-width: 0; }
+    .space-quote h3 { font-size: 16px; margin: 8px 0 10px; overflow-wrap: anywhere; }
+    .space-quote .quote-item { margin-bottom: 8px; }
+
+    .section-tab {
+      width: 100%;
+      text-align: left;
+      background: rgba(255,255,255,.08);
+      color: #f7fbf8;
+      border-color: rgba(255,255,255,.12);
+      padding: 12px;
+    }
+
+    .section-tab.active {
+      background: #f7fbf8;
+      color: var(--green);
+      border-color: #f7fbf8;
+    }
+
+    .section-tab strong {
+      display: block;
+      font-size: 15px;
+      margin-bottom: 4px;
+    }
+
+    .section-tab span {
+      color: inherit;
+      opacity: .72;
+      font-size: 13px;
+    }
+
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: none;
+    }
+
+    .workspace {
+      display: grid;
+      grid-template-columns: minmax(280px, 38%) minmax(0, 1fr);
+      gap: 18px;
+      align-items: start;
+    }
+
+    .room-panel {
+      overflow: hidden;
+    }
+
+    .room-image {
+      aspect-ratio: 4 / 3;
+      background: linear-gradient(135deg, #e1e9e5, #faf6ea);
+      display: grid;
+      place-items: center;
+      color: var(--green);
+      border-bottom: 1px solid var(--line);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .room-image img, .candidate-photo img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      display: block;
+    }
+
+    .empty-image {
+      text-align: center;
+      padding: 22px;
+      line-height: 1.5;
+      font-size: 15px;
+    }
+
+    .empty-image strong {
+      display: block;
+      font-size: 17px;
+      margin-bottom: 5px;
+    }
+
+    .panel-body {
+      padding: 16px;
+      display: grid;
+      gap: 12px;
+    }
+
+    label {
+      display: grid;
+      gap: 6px;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    input, textarea, select {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 10px 11px;
+      background: white;
+      color: var(--ink);
+      min-height: 40px;
+    }
+
+    textarea {
+      resize: vertical;
+      min-height: 86px;
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .candidate-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .candidate {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+      overflow: hidden;
+      display: grid;
+    }
+
+    .candidate.selected {
+      border-color: var(--gold);
+      box-shadow: 0 0 0 3px rgba(196, 139, 54, .18);
+    }
+
+    .candidate-photo {
+      position: relative;
+      aspect-ratio: 16 / 10;
+      background: var(--panel-2);
+      display: grid;
+      place-items: center;
+      color: var(--muted);
+      font-size: 14px;
+      overflow: hidden;
+    }
+
+    .candidate-content {
+      padding: 12px;
+      display: grid;
+      gap: 9px;
+    }
+
+    .candidate-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      align-items: flex-start;
+    }
+
+    .candidate-title {
+      font-weight: 760;
+      line-height: 1.3;
+      overflow-wrap: anywhere;
+    }
+
+    .price {
+      color: var(--green-2);
+      font-weight: 780;
+      white-space: nowrap;
+    }
+
+    .meta {
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.4;
+      overflow-wrap: anywhere;
+    }
+
+    .actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .add-form {
+      margin-top: 14px;
+      padding: 14px;
+      display: grid;
+      gap: 10px;
+    }
+
+    .candidate-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
+    .view-switch { display: flex; gap: 0; min-width: 0; }
+    .view-switch button { border: 1px solid var(--line); padding: 0 14px; border-radius: 0; background: white; }
+    .view-switch button[aria-pressed="true"] { background: var(--green); color: white; }
+    .quote-row span { min-width: 0; overflow-wrap: anywhere; }
+    .total { overflow-wrap: anywhere; }
+    .status { padding: 10px 16px; background: #fff0dc; color: #754a13; }
+    dialog { max-width: min(95vw, 1200px); max-height: 95vh; border: 0; padding: 16px; }
+    dialog::backdrop { background: #0009; }
+    dialog img { display: block; max-width: 100%; max-height: 80vh; object-fit: contain; }
+    #excelDialog { width: 900px; border-radius: 8px; }
+    #excelDialog h2 { font-size: 22px; margin-bottom: 16px; }
+    #excelMapping { margin: 16px 0; }
+    .import-table { overflow: auto; max-height: 260px; margin: 16px 0; }
+    .import-table table { border-collapse: collapse; width: 100%; font-size: 14px; }
+    .import-table th, .import-table td { padding: 8px; border-bottom: 1px solid var(--line); text-align: left; overflow-wrap: anywhere; min-width: 90px; }
+    .import-errors { color: var(--red); white-space: pre-wrap; margin: 12px 0; }
+    .add-candidate { flex: 0 0 40px; width: 40px; height: 40px; padding: 0; font-size: 28px; line-height: 1; display: grid; place-items: center; }
+    .add-candidate:disabled { opacity: .45; cursor: default; transform: none; }
+    .image-preview img { max-width: 100%; max-height: 150px; object-fit: contain; }
+    .photo-edit { position: absolute; top: 10px; right: 10px; width: 36px; height: 36px; padding: 0; background: white; color: var(--ink); border: 1px solid var(--line); font-size: 22px; cursor: pointer; box-shadow: 0 2px 6px #0001; }
+    .candidate-photo .photo-edit img { width: 18px; height: 18px; margin: auto; }
+    .photo-pager { display: flex; justify-content: center; align-items: center; gap: 6px; height: 32px; padding: 2px 8px; border-bottom: 1px solid var(--line); font-size: 11px; color: var(--muted); white-space: nowrap; }
+    .photo-pager button { width: 28px; height: 28px; min-height: 28px; padding: 0; background: transparent; color: var(--muted); font-size: 18px; }
+    .candidate-title a { color: inherit; text-decoration: none; }
+    .candidate-title a:hover { text-decoration: underline; }
+    #candidateForm { width: 700px; max-width: calc(100vw - 32px); max-height: calc(100dvh - 32px); overflow: auto; margin: auto; }
+    #candidateForm:not([open]) { display: none; }
+    #candidateForm[open] { display: grid; }
+    .editor-head, .editor-footer { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+    .editor-head button { width: 36px; padding: 0; font-size: 24px; }
+    .editor-footer { flex-wrap: wrap; }
+    .editor-footer .danger { margin-right: auto; }
+    .image-preview { display: flex; flex-wrap: wrap; gap: 8px; }
+    .gallery-image { position: relative; width: 100px; height: 90px; background: var(--panel-2); }
+    .gallery-image img { width: 100%; height: 100%; }
+    .gallery-image button { position: absolute; top: 2px; right: 2px; width: 24px; height: 24px; min-height: 24px; padding: 0; background: white; font-size: 18px; }
+    #pasteZone { width: min(70vw, 420px); min-height: 140px; border: 1px dashed var(--line); padding: 20px; margin: 14px 0; }
+    .candidate-photo, .room-image { cursor: zoom-in; }
+    .candidate-photo img, .room-image img { min-height: 0; }
+
+    .quote h2 {
+      font-size: 22px;
+      margin-bottom: 6px;
+    }
+
+    .total {
+      font-size: 38px;
+      font-weight: 840;
+      margin: 20px 0 16px;
+      color: #f2d6a2;
+    }
+
+    .quote-list {
+      display: grid;
+      gap: 10px;
+      margin-top: 16px;
+    }
+
+    .quote-item {
+      border: 1px solid rgba(255,255,255,.12);
+      background: rgba(255,255,255,.07);
+      border-radius: 8px;
+      padding: 12px;
+    }
+
+    .quote-item strong {
+      display: block;
+      margin-bottom: 4px;
+      overflow-wrap: anywhere;
+    }
+
+    .quote-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      color: rgba(247, 251, 248, .76);
+      font-size: 14px;
+      line-height: 1.4;
+    }
+
+    .empty-state {
+      padding: 22px;
+      color: var(--muted);
+      border: 1px dashed var(--line);
+      border-radius: 8px;
+      background: rgba(255,255,255,.65);
+      line-height: 1.5;
+    }
+
+    .quote .empty-state {
+      background: rgba(255,255,255,.06);
+      border-color: rgba(255,255,255,.18);
+      color: rgba(247, 251, 248, .76);
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      border: 1px solid rgba(255,255,255,.16);
+      border-radius: 999px;
+      min-height: 30px;
+      padding: 4px 10px;
+      font-size: 13px;
+      color: rgba(247, 251, 248, .78);
+    }
+
+    .hidden { display: none !important; }
+
+    @media (max-width: 1120px) {
+      .app {
+        grid-template-columns: 230px minmax(0, 1fr);
+      }
+      .quote {
+        grid-column: 1 / -1;
+        border-left: 0;
+        border-top: 1px solid rgba(255,255,255,.14);
+      }
+      .quote-list {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+
+    @media (max-width: 820px) {
+      .app, .workspace {
+        display: block;
+      }
+      .sidebar, .main, .quote {
+        padding: 18px;
+      }
+      .section-list {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+      .topbar {
+        display: grid;
+      }
+      .toolbar {
+        justify-content: stretch;
+      }
+      .toolbar button {
+        flex: 1 1 150px;
+      }
+      .room-panel {
+        margin-bottom: 16px;
+      }
+    }
+
+    @media (max-width: 620px) {
+      .section-list, .candidate-grid, .quote-list, .form-grid {
+        grid-template-columns: 1fr;
+      }
+      .topbar h2 {
+        font-size: 24px;
+      }
+      .total {
+        font-size: 32px;
+      }
+    }
+
+    @media print {
+      body { background: white; }
+      .sidebar, .toolbar, .add-form, .add-candidate, .actions, input[type="file"] { display: none !important; }
+      .app { display: block; }
+      .main, .quote { color: #111; background: white; padding: 0; }
+      .panel, .candidate, .quote-item { box-shadow: none; break-inside: avoid; }
+      .quote { margin-top: 18px; border: 0; }
+      .total { color: #111; }
+      .quote-row, .subtle { color: #444; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="mark">家</div>
+        <div>
+          <h1>家具选择确认表</h1>
+          <p class="subtle">方案与采购清单</p>
+        </div>
+      </div>
+      <button class="primary" id="addSectionBtn" type="button">添加家具位置</button>
+      <div class="section-list" id="sectionList"></div>
+    </aside>
+
+    <main class="main">
+      <div class="topbar">
+        <div>
+          <h2 id="roomTitle">客厅 · 沙发</h2>
+          <p id="roomSummary">上传设计效果图，粘贴淘宝链接，比较尺寸、材质、颜色、总价和数量。</p>
+        </div>
+        <div class="toolbar">
+          <button class="secondary" id="exportBtn" type="button">导出确认单</button>
+          <button class="secondary" id="printBtn" type="button">打印/存 PDF</button>
+          <button class="secondary" id="backupBtn" type="button">备份项目</button>
+          <button class="secondary" id="imageDirectoryBtn" type="button">设置图片目录</button>
+          <button class="secondary" id="excelBtn" type="button">导入 Excel</button>
+          <input class="hidden" id="excelFile" type="file" accept=".xlsx,.xls,.csv">
+          <button class="secondary" id="restoreBtn" type="button">导入备份</button>
+          <input class="hidden" id="restoreFile" type="file" accept="application/json,.json">
+          <button class="danger" id="resetBtn" type="button">清空示例</button>
+        </div>
+      </div>
+
+      <p id="status" class="status hidden" role="status"></p>
+      <section class="workspace">
+        <div class="panel room-panel">
+          <div class="room-image" id="roomImage"></div>
+          <div class="panel-body">
+            <label>空间<input id="sectionRoom" autocomplete="off" placeholder="例如：客厅"></label>
+            <label>
+              类型/位置
+              <input id="sectionName" autocomplete="off">
+            </label>
+            <label>
+              设计效果图
+              <input id="sectionImage" type="file" accept="image/*">
+            </label>
+            <button class="secondary" id="pasteRoomBtn" type="button">粘贴效果图</button>
+            <label>
+              备注
+              <textarea id="sectionNotes"></textarea>
+            </label>
+            <button class="danger" id="deleteSectionBtn" type="button">删除此位置</button>
+          </div>
+        </div>
+
+        <div>
+          <div class="candidate-toolbar">
+          <div class="view-switch" aria-label="对比视图">
+            <button type="button" id="productView" aria-pressed="true">商品图</button>
+            <button type="button" id="sceneView" aria-pressed="false">场景效果图</button>
+          </div>
+          <button class="secondary add-candidate" id="showAddFormBtn" type="button" aria-label="添加候选家具" title="添加候选家具" aria-expanded="false" aria-controls="candidateForm"><span aria-hidden="true">+</span></button>
+          </div>
+          <div class="candidate-grid" id="candidateGrid"></div>
+          <dialog class="add-form hidden" id="candidateForm" aria-labelledby="formTitle">
+            <div class="editor-head"><h3 id="formTitle">新增候选家具</h3><button class="secondary" id="closeCandidateBtn" type="button" title="关闭" aria-label="关闭">×</button></div>
+            <p id="formStatus" class="import-errors hidden" role="status"></p>
+            <div class="form-grid">
+              <label>名称（可选）<input id="itemName" placeholder="留空自动编号"></label>
+              <label>淘宝链接<input id="itemUrl" placeholder="https://item.taobao.com/..."></label>
+              <label>家具总价<input id="itemPrice" type="number" min="0" step="0.01" placeholder="0"></label>
+              <label>数量<input id="itemQty" type="number" min="1" step="1" value="1"></label>
+              <label>运费合计<input id="itemShipping" type="number" min="0" step="0.01" value="0"></label>
+              <label>安装费合计<input id="itemInstallation" type="number" min="0" step="0.01" value="0"></label>
+              <label>颜色/材质<input id="itemSpec" placeholder="米白羊羔绒 / 黑胡桃木"></label>
+              <label>尺寸<input id="itemSize" placeholder="2200 × 950 × 780 mm"></label>
+            </div>
+            <label>
+              商品图片
+              <input id="itemImage" type="file" accept="image/*" multiple>
+            </label>
+            <button class="secondary" id="pasteItemBtn" type="button">粘贴商品图</button>
+            <div id="itemImagePreview" class="image-preview hidden"></div>
+            <label>场景效果图<input id="itemScene" type="file" accept="image/*" multiple></label>
+            <button class="secondary" id="pasteSceneBtn" type="button">粘贴场景图</button>
+            <div id="itemScenePreview" class="image-preview hidden"></div>
+            <label>
+              说明
+              <textarea id="itemNotes" placeholder="交期、安装、是否含运费、设计师意见等"></textarea>
+            </label>
+            <div class="editor-footer">
+            <button class="danger hidden" id="deleteItemBtn" type="button">删除方案</button>
+            <button class="secondary" id="cancelEditBtn" type="button">取消</button>
+            <button class="primary" id="addItemBtn" type="button">加入对比</button>
+            </div>
+          </dialog>
+        </div>
+      </section>
+    </main>
+
+    <aside class="quote">
+      <span class="pill" id="confirmedCount">0 项已确认</span>
+      <h2>总体报价</h2>
+      <p class="subtle" id="quoteProgress"></p>
+      <div class="total" id="quoteTotal">¥0</div>
+      <button class="secondary" id="copyBtn" type="button">复制确认清单</button>
+      <div class="quote-list" id="quoteList"></div>
+    </aside>
+  </div>
+  <dialog id="imageDialog"><button id="closeImageBtn" class="secondary" type="button">关闭</button><img id="largeImage" alt="图片预览"></dialog>
+  <dialog id="pasteDialog" aria-labelledby="pasteTitle">
+    <h2 id="pasteTitle">粘贴图片</h2>
+    <p id="pasteStatus" role="status"></p>
+    <div id="pasteZone" tabindex="0" role="textbox" aria-label="图片粘贴区域" contenteditable="true">图片粘贴区域</div>
+    <button class="secondary" id="cancelPasteBtn" type="button">取消</button>
+  </dialog>
+  <dialog id="excelDialog" aria-labelledby="excelTitle">
+    <h2 id="excelTitle">导入家具清单</h2>
+    <div class="form-grid">
+      <label>工作表<select id="excelSheet"></select></label>
+      <label>表头所在行<input id="excelHeader" type="number" min="1" step="1" value="1"></label>
+    </div>
+    <div id="excelMapping" class="form-grid"></div>
+    <p id="excelSummary" role="status"></p>
+    <div id="excelErrors" class="import-errors"></div>
+    <div id="excelPreview" class="import-table"></div>
+    <div class="actions">
+      <button class="primary" id="excelApply" type="button">加入清单</button>
+      <button class="secondary" id="excelCancel" type="button">取消</button>
+    </div>
+  </dialog>
+
+  <script src="project-storage.js"></script>
+  <script src="local-images.js"></script>
+  <script>
+    const storageKey = "furniture-selector-v1";
+
+    const sampleState = {
+      activeSectionId: "living-sofa",
+      sections: [
+        {
+          id: "living-sofa",
+          name: "客厅 · 沙发",
+          notes: "关注与设计效果图的比例、坐深、面料耐脏程度。报价可先填商品价，运费和安装写在说明里。",
+          image: "",
+          items: [
+            {
+              id: "sofa-a",
+              name: "模块沙发 A 款",
+              url: "https://item.taobao.com/",
+              price: 4680,
+              qty: 1,
+              spec: "暖灰科技布",
+              size: "2800 × 980 × 720 mm",
+              notes: "偏现代，和浅色墙面比较稳。",
+              image: "",
+              selected: true
+            },
+            {
+              id: "sofa-b",
+              name: "弧形沙发 B 款",
+              url: "https://item.taobao.com/",
+              price: 5290,
+              qty: 1,
+              spec: "奶油白绒布",
+              size: "2600 × 1050 × 760 mm",
+              notes: "造型更柔和，需要确认清洁维护。",
+              image: "",
+              selected: false
+            }
+          ]
+        },
+        {
+          id: "dining-light",
+          name: "餐厅 · 吊灯",
+          notes: "确认色温、离桌面高度，以及是否包含安装。",
+          image: "",
+          items: [
+            {
+              id: "lamp-a",
+              name: "线性吊灯",
+              url: "https://item.taobao.com/",
+              price: 860,
+              qty: 1,
+              spec: "黑色 / 3000K",
+              size: "1200 mm",
+              notes: "简洁，预算友好。",
+              image: "",
+              selected: true
+            }
+          ]
+        }
+      ]
+    };
+
+    let state = loadState();
+    let editingId = null;
+    let viewMode = "product";
+    let pasteTarget = null;
+    let formPasteTarget = null;
+    let formRevision = 0;
+    let formImages = { image: [], scene: [] };
+    const imageIndexes = new Map();
+    let projectStore = null;
+    let saveQueue = Promise.resolve();
+    let saveRevision = 0;
+
+    const el = (id) => document.getElementById(id);
+    const money = (value) => new Intl.NumberFormat("zh-CN", {
+      style: "currency",
+      currency: "CNY",
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    }).format(Number(value) || 0);
+
+    function loadState() {
+      try {
+        const saved = localStorage.getItem(storageKey);
+        return saved ? normalizeState(JSON.parse(saved)) : structuredClone(sampleState);
+      } catch {
+        return structuredClone(sampleState);
+      }
+    }
+
+    function normalizeState(value) {
+      if (!value || !Array.isArray(value.sections) || !value.sections.length) throw new Error("备份文件格式不正确。");
+      const sections = value.sections.map(section => {
+        if (!Array.isArray(section.items)) throw new Error("备份文件缺少候选家具。");
+        let confirmed = false;
+        return { id: uid("section"), name: String(section.name || "未命名空间"), ...sectionLocation(section), notes: String(section.notes || ""), image: validImage(section.image) ? section.image : "", items: section.items.map(item => {
+          const numbers = [item.price ?? 0, item.qty ?? 1, item.shipping ?? 0, item.installation ?? 0].map(Number);
+          if (!numbers.every(Number.isFinite) || numbers.some(number => number < 0) || numbers[1] < 1 || !Number.isInteger(numbers[1])) throw new Error("备份中的费用或数量无效。");
+          const selected = Boolean(item.selected) && !confirmed;
+          confirmed ||= selected;
+          const price = item.priceBasis === "total" ? numbers[0] : Math.round(numbers[0] * 100) * numbers[1] / 100;
+          const images = itemImages(item, "image");
+          const sceneImages = itemImages(item, "scene");
+          return { id: uid("item"), name: String(item.name || "未命名家具"), url: String(item.url || ""), spec: String(item.spec || ""), size: String(item.size || ""), notes: String(item.notes || ""), price, priceBasis: "total", qty: numbers[1], shipping: numbers[2], installation: numbers[3], selected, images, sceneImages, image: images[0] || "", scene: sceneImages[0] || "" };
+        }) };
+      });
+      const index = value.sections.findIndex(section => section.id === value.activeSectionId);
+      return { sections, activeSectionId: sections[Math.max(0, index)].id };
+    }
+
+    function saveState() {
+      if (projectStore) {
+        const revision = ++saveRevision;
+        const snapshot = structuredClone(state);
+        saveQueue = saveQueue.catch(() => {}).then(() => projectStore.save(snapshot));
+        return saveQueue.then(() => {
+          if (revision === saveRevision) el("status").classList.add("hidden");
+        }, error => {
+          if (revision === saveRevision) showStatus(error?.name === "QuotaExceededError"
+            ? "浏览器数据库容量不足，此次修改尚未保存。请备份项目并检查设备可用空间。"
+            : "此次修改尚未保存，请备份项目。数据库错误：" + (error?.message || "未知错误"));
+          throw error;
+        }).catch(() => false);
+      }
+      try {
+        localStorage.setItem(storageKey, JSON.stringify(state));
+        el("status").classList.add("hidden");
+      } catch {
+        showStatus("浏览器存储空间不足，当前修改尚未保存。请备份项目后减少图片数量。");
+      }
+    }
+
+    async function initializeStorage() {
+      if (typeof FurnitureStorage === "undefined") { render(); return; }
+      const app = document.querySelector(".app");
+      app.inert = true;
+      try {
+        const saved = await FurnitureStorage.load();
+        if (saved) state = normalizeState(saved);
+        projectStore = FurnitureStorage;
+        if (typeof LocalImages !== "undefined") {
+          await LocalImages.restore();
+          if (LocalImages.name) el("imageDirectoryBtn").title = LocalImages.name;
+        }
+        const success = await render();
+        if (success !== false) {
+          // Retain the old project until the database transaction has committed.
+          try { localStorage.removeItem(storageKey); } catch {}
+        }
+      } catch (error) {
+        render();
+        showStatus("无法读取浏览器数据库，请先备份项目后重试：" + (error?.message || "当前浏览器不支持"));
+      } finally { app.inert = false; }
+    }
+
+    function showStatus(message) {
+      el("status").textContent = message;
+      el("status").classList.remove("hidden");
+      if (el("candidateForm").open) { el("formStatus").textContent = message; el("formStatus").classList.remove("hidden"); }
+    }
+
+    function itemImages(item, field) {
+      const images = item[field === "image" ? "images" : "sceneImages"];
+      return Array.isArray(images) ? images.filter(validImage) : (validImage(item[field]) ? [item[field]] : []);
+    }
+
+    function goodsTotal(item) {
+      return Math.round(Number(item.price || 0) * 100) * (item.priceBasis === "total" ? 1 : Number(item.qty || 1)) / 100;
+    }
+
+    function itemTotal(item) {
+      return (Math.round(goodsTotal(item) * 100)
+        + Math.round(Number(item.shipping || 0) * 100)
+        + Math.round(Number(item.installation || 0) * 100)) / 100;
+    }
+
+    function validImage(value) { return typeof value === "string" && /^data:image\/(jpeg|png|webp|gif);base64,/.test(value); }
+
+    function uid(prefix) {
+      return `${prefix}-${Math.random().toString(36).slice(2, 9)}`;
+    }
+
+    function activeSection() {
+      return state.sections.find((section) => section.id === state.activeSectionId) || state.sections[0];
+    }
+
+    function sectionLocation(section) {
+      if (typeof section.room === "string" || typeof section.position === "string") {
+        return { room: String(section.room || "").trim(), position: String(section.position || "").trim() };
+      }
+      const parts = String(section.name || "").split(/\s*[·｜|/]\s*/);
+      return parts.length > 1
+        ? { room: parts[0].trim(), position: parts.slice(1).join(" · ").trim() }
+        : { room: "", position: String(section.name || "").trim() };
+    }
+
+    function groupedSections() {
+      const groups = new Map();
+      for (const section of state.sections) {
+        const room = sectionLocation(section).room || "未分类";
+        if (!groups.has(room)) groups.set(room, []);
+        groups.get(room).push(section);
+      }
+      return groups;
+    }
+
+    function readFile(input) {
+      return readImageFile(input.files && input.files[0]);
+    }
+
+    function readImageFile(file) {
+      return new Promise((resolve, reject) => {
+        if (!file) return resolve("");
+        if (!file.type.startsWith("image/")) return reject(new Error("请选择图片文件。"));
+        const reader = new FileReader();
+        reader.onerror = () => reject(new Error("图片读取失败，请重试。"));
+        reader.onload = () => {
+          const picture = new Image();
+          picture.onerror = () => reject(new Error("无法识别此图片，请使用 JPG、PNG 或 WebP。"));
+          picture.onload = () => {
+            const scale = Math.min(1, 1600 / Math.max(picture.width, picture.height));
+            const canvas = document.createElement("canvas");
+            canvas.width = Math.round(picture.width * scale);
+            canvas.height = Math.round(picture.height * scale);
+            const context = canvas.getContext("2d");
+            context.fillStyle = "#ffffff";
+            context.fillRect(0, 0, canvas.width, canvas.height);
+            context.drawImage(picture, 0, 0, canvas.width, canvas.height);
+            resolve(canvas.toDataURL("image/jpeg", .85));
+          };
+          picture.src = reader.result;
+        };
+        reader.readAsDataURL(file);
+      });
+    }
+
+    function render() {
+      if (!state.sections.length) {
+        state.sections.push({ id: uid("section"), name: "新的空间", notes: "", image: "", items: [] });
+        state.activeSectionId = state.sections[0].id;
+      }
+
+      const section = activeSection();
+      state.activeSectionId = section.id;
+
+      renderSections(section);
+      renderRoom(section);
+      renderCandidates(section);
+      renderQuote();
+      return saveState();
+    }
+
+    function renderSections(active) {
+      el("sectionList").innerHTML = [...groupedSections()].map(([room, sections]) => {
+        const confirmed = sections.filter(section => section.items.some(item => item.selected)).length;
+        return `<section class="space-group"><h3>${escapeHtml(room)}<span>${sections.length} 个位置 · ${confirmed} 个已确认</span></h3><div class="space-items">${sections.map((section) => {
+        const chosen = section.items.find((item) => item.selected);
+        return `
+          <button class="section-tab ${section.id === active.id ? "active" : ""}" type="button" data-section="${section.id}">
+            <strong>${escapeHtml(sectionLocation(section).position || "待选家具")}</strong>
+            <span>${section.items.length} 个候选 · ${chosen ? "已确认：" + escapeHtml(chosen.name) : "未确认"}</span>
+          </button>
+        `;
+        }).join("")}</div></section>`;
+      }).join("");
+
+      document.querySelectorAll("[data-section]").forEach((button) => {
+        button.addEventListener("click", () => {
+          state.activeSectionId = button.dataset.section;
+          clearForm();
+          render();
+        });
+      });
+    }
+
+    function renderRoom(section) {
+      el("roomTitle").textContent = section.name;
+      el("roomSummary").textContent = section.notes || "上传效果图，记录候选家具，确认最终选择。";
+      el("sectionRoom").value = sectionLocation(section).room;
+      el("sectionName").value = sectionLocation(section).position;
+      el("sectionNotes").value = section.notes;
+      el("roomImage").innerHTML = validImage(section.image)
+        ? `<img src="${escapeHtml(section.image)}" alt="${escapeHtml(section.name)}效果图">`
+        : `<div class="empty-image"><strong>设计效果图</strong><span>尚未上传</span></div>`;
+      el("sectionImage").value = "";
+    }
+
+    function renderCandidates(section) {
+      if (!section.items.length) {
+        el("candidateGrid").innerHTML = `<div class="empty-state">暂无候选方案</div>`;
+        return;
+      }
+
+      el("candidateGrid").innerHTML = section.items.map((item) => {
+        const lineTotal = itemTotal(item);
+        const pictures = itemImages(item, viewMode === "scene" ? "scene" : "image");
+        const imageKey = `${section.id}:${item.id}:${viewMode}`;
+        const imageIndex = Math.min(imageIndexes.get(imageKey) || 0, Math.max(0, pictures.length - 1));
+        const photo = pictures[imageIndex];
+        return `
+          <article class="candidate ${item.selected ? "selected" : ""}">
+            <div class="candidate-photo">
+              ${validImage(photo) ? `<img src="${escapeHtml(photo)}" alt="${escapeHtml(item.name)}">` : (viewMode === "scene" ? "尚未上传场景效果图" : "尚未上传商品图")}
+              <button class="photo-edit" type="button" data-edit="${item.id}" title="编辑方案" aria-label="编辑${escapeHtml(item.name)}"><img src="pencil.svg" alt="" aria-hidden="true"></button>
+            </div>
+            ${pictures.length > 1 ? `<div class="photo-pager"><button type="button" data-page="${item.id}" data-step="-1" aria-label="上一张" title="上一张">‹</button><span>${imageIndex + 1} / ${pictures.length}</span><button type="button" data-page="${item.id}" data-step="1" aria-label="下一张" title="下一张">›</button></div>` : ""}
+            <div class="candidate-content">
+              <div class="candidate-head">
+                <div class="candidate-title">${/^https?:\/\//i.test(item.url) ? `<a href="${escapeHtml(item.url)}" target="_blank" rel="noopener noreferrer" title="打开商品链接">${escapeHtml(item.name)}</a>` : escapeHtml(item.name)}</div>
+                <div class="price">${money(lineTotal)}</div>
+              </div>
+              <div class="meta">${escapeHtml(item.spec || "未填颜色/材质")} · ${escapeHtml(item.size || "未填尺寸")} · ${Number(item.qty || 1)} 件</div>
+              <div class="meta">${escapeHtml(item.notes || "暂无说明")}</div>
+              <div class="meta">家具总价 ${money(goodsTotal(item))} · 运费 ${money(item.shipping)} · 安装 ${money(item.installation)}</div>
+              <div class="actions">
+                <button class="primary" type="button" data-select="${item.id}">${item.selected ? "取消确认" : "确认此项"}</button>
+              </div>
+            </div>
+          </article>
+        `;
+      }).join("");
+
+      document.querySelectorAll("[data-page]").forEach(button => button.addEventListener("click", () => {
+        const item = section.items.find(item => item.id === button.dataset.page);
+        const count = itemImages(item, viewMode === "scene" ? "scene" : "image").length;
+        const key = `${section.id}:${item.id}:${viewMode}`;
+        imageIndexes.set(key, ((imageIndexes.get(key) || 0) + Number(button.dataset.step) + count) % count);
+        renderCandidates(section);
+      }));
+
+      document.querySelectorAll("[data-select]").forEach((button) => {
+        button.addEventListener("click", () => {
+          const selected = section.items.find(item => item.id === button.dataset.select).selected;
+          section.items.forEach((item) => item.selected = !selected && item.id === button.dataset.select);
+          render();
+        });
+      });
+      document.querySelectorAll("[data-edit]").forEach(button => button.addEventListener("click", () => {
+        const item = section.items.find(item => item.id === button.dataset.edit);
+        openCandidateEditor(item);
+      }));
+    }
+
+    function openCandidateEditor(item) {
+        clearForm();
+        editingId = item.id;
+        for (const [field, key] of Object.entries(formFields)) el(field).value = item[key] ?? (key === "qty" ? 1 : "");
+        el("itemPrice").value = goodsTotal(item);
+        formImages = { image: itemImages(item, "image"), scene: itemImages(item, "scene") };
+        renderFormImages();
+        el("deleteItemBtn").classList.remove("hidden");
+        el("formTitle").textContent = "修改候选家具";
+        el("addItemBtn").textContent = "保存修改";
+        el("cancelEditBtn").classList.remove("hidden");
+        openCandidateForm();
+        el("itemName").focus();
+    }
+
+    function confirmedItems() {
+      return state.sections
+        .map((section) => ({ section, item: section.items.find((candidate) => candidate.selected) }))
+        .filter((entry) => entry.item);
+    }
+
+    function renderQuote() {
+      const entries = confirmedItems();
+      const total = entries.reduce((sum, entry) => sum + Math.round(itemTotal(entry.item) * 100), 0) / 100;
+      el("quoteProgress").textContent = `${state.sections.length - entries.length} 个位置待确认 · 含已填运费与安装费`;
+      el("confirmedCount").textContent = `${entries.length} 项已确认`;
+      el("quoteTotal").textContent = money(total);
+      el("quoteList").innerHTML = entries.length ? [...groupedSections()].map(([room, sections]) => {
+        const chosen = sections.map(section => ({ section, item: section.items.find(item => item.selected) })).filter(entry => entry.item);
+        if (!chosen.length) return "";
+        const subtotal = chosen.reduce((sum, entry) => sum + Math.round(itemTotal(entry.item) * 100), 0) / 100;
+        return `<section class="space-quote"><h3>${escapeHtml(room)} · ${money(subtotal)}</h3>${chosen.map(({ section, item }) => `
+        <div class="quote-item">
+          <strong>${escapeHtml(sectionLocation(section).position || "待选家具")}</strong>
+          <div class="quote-row"><span>${escapeHtml(item.name)}</span><span>${money(itemTotal(item))}</span></div>
+          <div class="quote-row"><span>${escapeHtml(item.spec || "未填规格")}</span><span>${Number(item.qty || 1)} 件</span></div>
+        </div>
+        `).join("")}</section>`;
+      }).join("") : `<div class="empty-state">还没有确认项。</div>`;
+    }
+
+    function quoteText() {
+      const entries = confirmedItems();
+      const lines = entries.map(({ section, item }) => {
+        const subtotal = itemTotal(item);
+        return `${section.name}｜${item.name}｜${item.spec || "-"}｜${item.size || "-"}｜${item.qty || 1}件｜家具总价 ${money(goodsTotal(item))}｜运费 ${money(item.shipping)}｜安装 ${money(item.installation)}｜小计 ${money(subtotal)}｜${item.url || "-"}`;
+      });
+      const total = entries.reduce((sum, entry) => sum + Math.round(itemTotal(entry.item) * 100), 0) / 100;
+      return `家具确认清单\n${lines.join("\n")}\n总计：${money(total)}\n待确认位置：${state.sections.length - entries.length}`;
+    }
+
+    function downloadText(filename, content) {
+      const blob = new Blob([content], { type: "text/plain;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = filename;
+      link.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function escapeHtml(value) {
+      return String(value || "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+
+    el("addSectionBtn").addEventListener("click", () => {
+      const room = sectionLocation(activeSection()).room;
+      const section = { id: uid("section"), room, position: "新的位置", name: [room, "新的位置"].filter(Boolean).join(" · "), notes: "", image: "", items: [] };
+      state.sections.push(section);
+      state.activeSectionId = section.id;
+      clearForm();
+      render();
+    });
+
+    function updateLocation() {
+      const section = activeSection();
+      section.room = el("sectionRoom").value.trim();
+      section.position = el("sectionName").value.trim();
+      section.name = [section.room, section.position].filter(Boolean).join(" · ") || "未命名位置";
+      el("roomTitle").textContent = activeSection().name;
+      renderSections(activeSection());
+      renderQuote();
+      saveState();
+    }
+    el("sectionName").addEventListener("input", updateLocation);
+    el("sectionRoom").addEventListener("input", updateLocation);
+
+    el("sectionNotes").addEventListener("input", (event) => {
+      activeSection().notes = event.target.value;
+      el("roomSummary").textContent = event.target.value;
+      saveState();
+    });
+
+    el("sectionImage").addEventListener("change", async (event) => {
+      const section = activeSection();
+      try { section.image = await readFile(event.target); render(); }
+      catch (error) { showStatus(error.message); }
+    });
+
+    el("addItemBtn").addEventListener("click", async () => {
+      const section = activeSection();
+      const existing = section.items.find(item => item.id === editingId);
+      const price = Number(el("itemPrice").value);
+      const qty = Number(el("itemQty").value);
+      const shipping = Number(el("itemShipping").value);
+      const installation = Number(el("itemInstallation").value);
+      if (!el("itemPrice").value || ![price, qty, shipping, installation].every(Number.isFinite) || price < 0 || shipping < 0 || installation < 0 || qty < 1 || !Number.isInteger(qty)) {
+        showStatus("请填写家具总价和整数数量，费用不能为负数。"); return;
+      }
+      if (el("itemUrl").value.trim() && !/^https?:\/\//i.test(el("itemUrl").value.trim())) { showStatus("请填写以 http:// 或 https:// 开头的商品链接。"); return; }
+      el("addItemBtn").disabled = true;
+      const fields = Object.fromEntries(Object.entries(formFields).map(([id, key]) => [key, el(id).value]));
+      const images = [...formImages.image];
+      const sceneImages = [...formImages.scene];
+      try {
+      const image = images[0] || "";
+      const scene = sceneImages[0] || "";
+      const item = {
+        id: existing?.id || uid("item"),
+        name: fields.name.trim() || existing?.name || `方案 ${section.items.length + 1}`,
+        url: fields.url.trim(),
+        price, priceBasis: "total", qty, shipping, installation, scene, images, sceneImages,
+        spec: fields.spec,
+        size: fields.size,
+        notes: fields.notes,
+        image,
+        selected: existing?.selected || false
+      };
+      if (existing) Object.assign(existing, item);
+      else section.items.push(item);
+      clearForm();
+      render();
+      } catch (error) { showStatus(error.message); }
+      finally { el("addItemBtn").disabled = false; }
+    });
+
+    const formFields = { itemName: "name", itemUrl: "url", itemPrice: "price", itemQty: "qty", itemShipping: "shipping", itemInstallation: "installation", itemSpec: "spec", itemSize: "size", itemNotes: "notes" };
+    function clearForm() {
+      editingId = null;
+      formPasteTarget = null;
+      formRevision++;
+      formImages = { image: [], scene: [] };
+      for (const id of ["itemImagePreview", "itemScenePreview"]) { el(id).innerHTML = ""; el(id).classList.add("hidden"); }
+      el("candidateForm").classList.add("hidden");
+      if (el("candidateForm").open) el("candidateForm").close();
+      el("deleteItemBtn").classList.add("hidden");
+      el("formStatus").classList.add("hidden");
+      el("showAddFormBtn").disabled = false;
+      el("showAddFormBtn").setAttribute("aria-expanded", "false");
+      Object.keys(formFields).forEach(id => el(id).value = id === "itemQty" ? "1" : "");
+      el("itemImage").value = "";
+      el("itemScene").value = "";
+      el("formTitle").textContent = "新增候选家具";
+      el("addItemBtn").textContent = "加入对比";
+      el("cancelEditBtn").textContent = "取消";
+    }
+    function openCandidateForm() {
+      el("candidateForm").classList.remove("hidden");
+      el("candidateForm").showModal();
+      el("showAddFormBtn").disabled = true;
+      el("showAddFormBtn").setAttribute("aria-expanded", "true");
+    }
+    el("showAddFormBtn").addEventListener("click", () => { clearForm(); openCandidateForm(); el("itemName").focus(); });
+    el("cancelEditBtn").addEventListener("click", clearForm);
+    el("closeCandidateBtn").addEventListener("click", clearForm);
+    el("candidateForm").addEventListener("cancel", event => { event.preventDefault(); clearForm(); });
+    el("deleteItemBtn").addEventListener("click", () => {
+      const section = activeSection();
+      const item = section.items.find(item => item.id === editingId);
+      if (!item || !confirm(`删除“${item.name}”？`)) return;
+      section.items = section.items.filter(candidate => candidate.id !== item.id);
+      clearForm(); render();
+    });
+
+    function renderFormImages() {
+      for (const [field, id] of [["image", "itemImagePreview"], ["scene", "itemScenePreview"]]) {
+        el(id).innerHTML = formImages[field].map((image, index) => `<div class="gallery-image"><img src="${image}" alt="${field === "image" ? "商品" : "场景"}图片 ${index + 1}"><button type="button" data-remove-image="${field}" data-image-index="${index}" aria-label="移除图片 ${index + 1}" title="移除图片">×</button></div>`).join("");
+        el(id).classList[formImages[field].length ? "remove" : "add"]("hidden");
+      }
+      document.querySelectorAll("[data-remove-image]").forEach(button => button.addEventListener("click", () => {
+        formImages[button.dataset.removeImage].splice(Number(button.dataset.imageIndex), 1);
+        renderFormImages();
+      }));
+    }
+
+    async function applyPastedImage(file, target) {
+      const image = await readImageFile(file);
+      if (!image) throw new Error("剪贴板中没有图片。");
+      const section = state.sections.find(section => section.id === target.sectionId);
+      if (!section) throw new Error("该位置已删除。");
+      if (target.kind === "form" && (target.revision !== formRevision || activeSection().id !== target.sectionId)) throw new Error("候选表单已更改，请重新粘贴。");
+      if (typeof LocalImages !== "undefined") await LocalImages.save(image);
+      if (target.kind === "form") {
+        if (target.revision !== formRevision || activeSection().id !== target.sectionId) throw new Error("候选表单已更改，请重新粘贴。");
+        formImages[target.field].push(image);
+        const inputId = target.field === "image" ? "itemImage" : "itemScene";
+        el(inputId).value = "";
+        renderFormImages();
+      } else if (target.kind === "room") {
+        section.image = image;
+        render();
+      } else {
+        const item = section.items.find(item => item.id === target.itemId);
+        if (!item) throw new Error("该候选方案已删除。");
+        const images = itemImages(item, target.field);
+        images.push(image);
+        item[target.field === "image" ? "images" : "sceneImages"] = images;
+        item[target.field] = images[0];
+        render();
+      }
+    }
+
+    async function beginImagePaste(target) {
+      if (typeof LocalImages !== "undefined") {
+        try { await LocalImages.authorize(); el("imageDirectoryBtn").title = LocalImages.name; }
+        catch (error) { if (error.name !== "AbortError") showStatus(error.message); return; }
+      }
+      if (target.kind === "form") {
+        formPasteTarget = target;
+        el("formStatus").classList.remove("hidden");
+        el("formStatus").textContent = "正在读取剪贴板…";
+        try {
+          if (!navigator.clipboard?.read) throw new Error("clipboard unavailable");
+          const entries = await navigator.clipboard.read();
+          const entry = entries.find(entry => entry.types.some(type => type.startsWith("image/")));
+          if (!entry) throw new Error("no image");
+          const image = await entry.getType(entry.types.find(type => type.startsWith("image/")));
+          if (formPasteTarget !== target) return;
+          await applyPastedImage(image, target);
+          el("formStatus").classList.add("hidden");
+        } catch {
+          if (formPasteTarget === target) el("formStatus").textContent = `请在此弹窗粘贴${target.field === "image" ? "商品" : "场景"}图片（Mac：Command+V，Windows：Ctrl+V）。`;
+        }
+        return;
+      }
+      pasteTarget = target;
+      el("pasteStatus").textContent = "正在读取剪贴板…";
+      el("pasteDialog").showModal();
+      el("pasteZone").focus();
+      try {
+        if (!navigator.clipboard?.read) throw new Error("clipboard unavailable");
+        const entries = await navigator.clipboard.read();
+        const entry = entries.find(entry => entry.types.some(type => type.startsWith("image/")));
+        if (!entry) throw new Error("no image");
+        const type = entry.types.find(type => type.startsWith("image/"));
+        const image = await entry.getType(type);
+        if (pasteTarget !== target || !el("pasteDialog").open) return;
+        await applyPastedImage(image, target);
+        if (pasteTarget === target) { pasteTarget = null; el("pasteDialog").close(); }
+      } catch {
+        if (pasteTarget === target) el("pasteStatus").textContent = "请在下方粘贴图片（Mac：Command+V，Windows：Ctrl+V）。";
+      }
+    }
+    el("pasteZone").addEventListener("paste", async event => {
+      event.preventDefault();
+      const target = pasteTarget;
+      if (!target) return;
+      const entry = Array.from(event.clipboardData?.items || []).find(item => item.kind === "file" && item.type.startsWith("image/"));
+      const file = entry?.getAsFile();
+      if (!file) { el("pasteStatus").textContent = "剪贴板中没有图片，请先复制图片或截图。"; return; }
+      try {
+        await applyPastedImage(file, target);
+        if (pasteTarget === target) { pasteTarget = null; el("pasteDialog").close(); }
+      } catch (error) { el("pasteStatus").textContent = error.message; }
+    });
+    el("pasteDialog").addEventListener("close", () => { pasteTarget = null; });
+    el("candidateForm").addEventListener("paste", async event => {
+      const entries = Array.from(event.clipboardData?.items || []).filter(item => item.kind === "file" && item.type.startsWith("image/"));
+      if (!entries.length) return;
+      event.preventDefault();
+      const target = formPasteTarget || { kind: "form", sectionId: activeSection().id, revision: formRevision, field: "image" };
+      try {
+        if (typeof LocalImages !== "undefined") await LocalImages.authorize();
+        for (const entry of entries) await applyPastedImage(entry.getAsFile(), target);
+        el("formStatus").classList.add("hidden");
+      } catch (error) { showStatus(error.message); }
+    });
+    el("cancelPasteBtn").addEventListener("click", () => el("pasteDialog").close());
+    el("pasteRoomBtn").addEventListener("click", () => beginImagePaste({ kind: "room", sectionId: activeSection().id }));
+    el("imageDirectoryBtn").addEventListener("click", async () => {
+      try {
+        const name = await LocalImages.configure();
+        el("imageDirectoryBtn").title = name;
+        el("imageDirectoryBtn").disabled = true;
+        const images = new Set();
+        for (const section of state.sections) {
+          if (validImage(section.image)) images.add(section.image);
+          for (const item of section.items) for (const field of ["image", "scene"]) itemImages(item, field).forEach(image => images.add(image));
+        }
+        for (const field of ["image", "scene"]) formImages[field].forEach(image => images.add(image));
+        for (const image of images) await LocalImages.save(image);
+        showStatus(`图片目录：${name}，已有 ${images.size} 张图片已保存到本地。`);
+      } catch (error) { if (error.name !== "AbortError") showStatus("本地图片保存失败：" + error.message); }
+      finally { el("imageDirectoryBtn").disabled = false; }
+    });
+    for (const [id, field] of [["pasteItemBtn", "image"], ["pasteSceneBtn", "scene"]]) el(id).addEventListener("click", () => beginImagePaste({ kind: "form", sectionId: activeSection().id, revision: formRevision, field }));
+    let uploadingCount = 0;
+    for (const id of ["itemImage", "itemScene"]) el(id).addEventListener("change", async event => {
+      const files = Array.from(event.target.files || []);
+      const revision = formRevision;
+      const field = id === "itemImage" ? "image" : "scene";
+      uploadingCount++;
+      el("addItemBtn").disabled = true;
+      try {
+        const images = await Promise.all(files.map(readImageFile));
+        if (revision !== formRevision) return;
+        formImages[field].push(...images);
+        renderFormImages();
+      } catch (error) { showStatus(error.message); }
+      finally {
+        uploadingCount--;
+        el("addItemBtn").disabled = uploadingCount > 0;
+        event.target.value = "";
+      }
+    });
+    el("deleteSectionBtn").addEventListener("click", () => {
+      if (!confirm(`删除“${activeSection().name}”及其候选家具？`)) return;
+      state.sections = state.sections.filter(section => section.id !== activeSection().id);
+      clearForm(); render();
+    });
+    for (const mode of ["product", "scene"]) el(mode + "View").addEventListener("click", () => {
+      viewMode = mode;
+      el("productView").setAttribute("aria-pressed", String(mode === "product"));
+      el("sceneView").setAttribute("aria-pressed", String(mode === "scene"));
+      renderCandidates(activeSection());
+    });
+    document.addEventListener("click", event => {
+      if (event.target.matches(".candidate-photo > img, .room-image img")) {
+        el("largeImage").src = event.target.src;
+        el("imageDialog").showModal();
+      }
+    });
+    el("closeImageBtn").addEventListener("click", () => el("imageDialog").close());
+    el("backupBtn").addEventListener("click", () => downloadText("家具项目备份.json", JSON.stringify(state, null, 2)));
+    el("restoreBtn").addEventListener("click", () => el("restoreFile").click());
+    el("restoreFile").addEventListener("change", async event => {
+      const file = event.target.files[0];
+      if (!file) return;
+      try {
+        const imported = normalizeState(JSON.parse(await file.text()));
+        if (confirm("用备份替换当前项目？")) { state = imported; clearForm(); render(); }
+      } catch (error) { showStatus(error.message); }
+      event.target.value = "";
+    });
+
+    el("exportBtn").addEventListener("click", () => downloadText("家具确认清单.txt", quoteText()));
+    el("printBtn").addEventListener("click", () => window.print());
+    el("copyBtn").addEventListener("click", async () => {
+      try { await navigator.clipboard.writeText(quoteText()); }
+      catch { downloadText("家具确认清单.txt", quoteText()); return; }
+      el("copyBtn").textContent = "已复制";
+      setTimeout(() => el("copyBtn").textContent = "复制确认清单", 1200);
+    });
+    el("resetBtn").addEventListener("click", () => {
+      if (confirm("清空当前内容并恢复示例？")) {
+        state = structuredClone(sampleState);
+        clearForm();
+        render();
+      }
+    });
+
+    const storageReady = initializeStorage();
+  </script>
+  <script src="xlsx.full.min.js"></script>
+  <script src="excel-import.js"></script>
+</body>
+</html>
