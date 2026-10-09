@@ -660,6 +660,7 @@
     </div>
   </dialog>
 
+  <script src="published-project.js"></script>
   <script src="project-storage.js"></script>
   <script src="local-images.js"></script>
   <script>
@@ -746,9 +747,9 @@
     function loadState() {
       try {
         const saved = localStorage.getItem(storageKey);
-        return saved ? normalizeState(JSON.parse(saved)) : structuredClone(sampleState);
+        return saved ? normalizeState(JSON.parse(saved)) : normalizeState(window.FurnitureInitialProject || sampleState);
       } catch {
-        return structuredClone(sampleState);
+        return normalizeState(window.FurnitureInitialProject || sampleState);
       }
     }
 
@@ -1344,6 +1345,19 @@
     });
     el("closeImageBtn").addEventListener("click", () => el("imageDialog").close());
     el("backupBtn").addEventListener("click", () => downloadText("家具项目备份.json", JSON.stringify(state, null, 2)));
+    if (window.FurnitureInitialProject) {
+      const publishedButton = document.createElement("button");
+      publishedButton.type = "button";
+      publishedButton.className = "secondary";
+      publishedButton.textContent = "载入发布项目";
+      el("backupBtn").after(publishedButton);
+      publishedButton.addEventListener("click", () => {
+        if (!confirm("用网站发布的项目替换当前浏览器中的项目？请先备份未保存到网站的修改。")) return;
+        state = normalizeState(window.FurnitureInitialProject);
+        clearForm();
+        render();
+      });
+    }
     el("restoreBtn").addEventListener("click", () => el("restoreFile").click());
     el("restoreFile").addEventListener("change", async event => {
       const file = event.target.files[0];
