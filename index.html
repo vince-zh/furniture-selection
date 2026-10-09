@@ -148,6 +148,8 @@
       flex-wrap: wrap;
       justify-content: flex-end;
     }
+    .toolbar .cart-button { display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
+    .cart-button img { width: 18px; height: 18px; flex-shrink: 0; }
 
     .primary {
       background: var(--green);
@@ -577,17 +579,13 @@
           <p id="roomSummary">上传设计效果图，粘贴淘宝链接，比较尺寸、材质、颜色、总价和数量。</p>
         </div>
         <div class="toolbar">
-          <button class="secondary" id="exportBtn" type="button">导出确认单</button>
-          <button class="secondary" id="printBtn" type="button">打印/存 PDF</button>
-          <button class="secondary" id="quoteBtn" type="button">查看报价</button>
-          <button class="secondary" id="backupBtn" type="button">备份项目</button>
-          <button class="primary" id="publishBtn" type="button">发布</button>
+          <button class="secondary cart-button" id="quoteBtn" type="button" title="购物车 · 查看总报价"><img src="shopping-cart.svg" alt="" aria-hidden="true">查看总报价</button>
+          <button class="secondary" id="restoreBtn" type="button">上传备份</button>
+          <button class="secondary" id="loadPublishedBtn" type="button">载入发布项目</button>
           <button class="secondary" id="imageDirectoryBtn" type="button">设置图片目录</button>
-          <button class="secondary" id="excelBtn" type="button">导入 Excel</button>
-          <input class="hidden" id="excelFile" type="file" accept=".xlsx,.xls,.csv">
-          <button class="secondary" id="restoreBtn" type="button">导入备份</button>
-          <input class="hidden" id="restoreFile" type="file" accept="application/json,.json">
-          <button class="danger" id="resetBtn" type="button">清空示例</button>
+          <button class="secondary" id="exportExcelBtn" type="button">导出为 Excel</button>
+          <button class="primary" id="publishBtn" type="button">发布</button>
+          <input class="hidden" id="restoreFile" type="file" accept="application/json,.json,.xlsx">
         </div>
       </div>
 
@@ -669,22 +667,6 @@
     <div id="pasteZone" tabindex="0" role="textbox" aria-label="图片粘贴区域" contenteditable="true">图片粘贴区域</div>
     <button class="secondary" id="cancelPasteBtn" type="button">取消</button>
   </dialog>
-  <dialog id="excelDialog" aria-labelledby="excelTitle">
-    <h2 id="excelTitle">导入家具清单</h2>
-    <div class="form-grid">
-      <label>工作表<select id="excelSheet"></select></label>
-      <label>表头所在行<input id="excelHeader" type="number" min="1" step="1" value="1"></label>
-    </div>
-    <div id="excelMapping" class="form-grid"></div>
-    <p id="excelSummary" role="status"></p>
-    <div id="excelErrors" class="import-errors"></div>
-    <div id="excelPreview" class="import-table"></div>
-    <div class="actions">
-      <button class="primary" id="excelApply" type="button">加入清单</button>
-      <button class="secondary" id="excelCancel" type="button">取消</button>
-    </div>
-  </dialog>
-
   <script src="published-project.js"></script>
   <dialog id="publishDialog" aria-labelledby="publishTitle">
     <div class="editor-head"><h2 id="publishTitle">发布到 GitHub</h2><button class="secondary" id="closePublishBtn" type="button" aria-label="关闭发布">×</button></div>
@@ -1376,7 +1358,6 @@
       }
     });
     el("closeImageBtn").addEventListener("click", () => el("imageDialog").close());
-    el("backupBtn").addEventListener("click", () => downloadText("家具项目备份.json", JSON.stringify(state, null, 2)));
     let publishBusy = false;
     let publishWaiting = false;
     el("publishBtn").addEventListener("click", () => {
@@ -1435,56 +1416,44 @@
         el("submitPublishBtn").disabled = false;
       }
     });
-    if (window.FurnitureInitialProject) {
-      const publishedButton = document.createElement("button");
-      publishedButton.type = "button";
-      publishedButton.className = "secondary";
-      publishedButton.textContent = "载入发布项目";
-      el("backupBtn").after(publishedButton);
-      publishedButton.addEventListener("click", async () => {
-        if (!confirm("用网站发布的项目替换当前浏览器中的项目？请先备份未保存到网站的修改。")) return;
-        publishedButton.disabled = true;
-        try {
-          const response = await fetch(GitHubPublish.site + "published-project.js?latest=" + Date.now(), { cache: "no-store" });
-          if (!response.ok) throw Error("无法取得最新发布项目，请稍后重试。");
-          const project = normalizeState(GitHubPublish.parseSource(await response.text()));
-          state = project;
-          clearForm();
-          await render();
-        } catch (error) { showStatus(error.message); }
-        finally { publishedButton.disabled = false; }
-      });
-    }
+    el("loadPublishedBtn").addEventListener("click", async () => {
+      if (!confirm("载入最新发布项目会替换当前内容，包括尚未发布的修改。请先导出 Excel 保留完整备份，是否继续？")) return;
+      el("loadPublishedBtn").disabled = true;
+      try {
+        const response = await fetch(GitHubPublish.site + "published-project.js?latest=" + Date.now(), { cache: "no-store" });
+        if (!response.ok) throw Error("无法取得最新发布项目，请稍后重试。");
+        state = normalizeState(GitHubPublish.parseSource(await response.text()));
+        clearForm();
+        await render();
+      } catch (error) { showStatus(error.message); }
+      finally { el("loadPublishedBtn").disabled = false; }
+    });
+    el("exportExcelBtn").addEventListener("click", () => {
+      try { ExcelProject.download(state); }
+      catch (error) { showStatus("Excel 导出失败：" + error.message); }
+    });
     el("restoreBtn").addEventListener("click", () => el("restoreFile").click());
     el("restoreFile").addEventListener("change", async event => {
       const file = event.target.files[0];
       if (!file) return;
       try {
-        const imported = normalizeState(JSON.parse(await file.text()));
+        const data = /\.xlsx$/i.test(file.name || "") ? ExcelProject.restore(await file.arrayBuffer()) : JSON.parse(await file.text());
+        const imported = normalizeState(data);
         if (confirm("用备份替换当前项目？")) { state = imported; clearForm(); render(); }
       } catch (error) { showStatus(error.message); }
       event.target.value = "";
     });
 
-    el("exportBtn").addEventListener("click", () => downloadText("家具确认清单.txt", quoteText()));
-    el("printBtn").addEventListener("click", () => window.print());
     el("copyBtn").addEventListener("click", async () => {
       try { await navigator.clipboard.writeText(quoteText()); }
       catch { downloadText("家具确认清单.txt", quoteText()); return; }
       el("copyBtn").textContent = "已复制";
       setTimeout(() => el("copyBtn").textContent = "复制确认清单", 1200);
     });
-    el("resetBtn").addEventListener("click", () => {
-      if (confirm("清空当前内容并恢复示例？")) {
-        state = structuredClone(sampleState);
-        clearForm();
-        render();
-      }
-    });
 
     const storageReady = initializeStorage();
   </script>
   <script src="xlsx.full.min.js"></script>
-  <script src="excel-import.js"></script>
+  <script src="excel-export.js"></script>
 </body>
 </html>
