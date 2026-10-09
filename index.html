@@ -367,6 +367,13 @@
     dialog::backdrop { background: #0009; }
     dialog img { display: block; max-width: 100%; max-height: 80vh; object-fit: contain; }
     #excelDialog { width: 900px; border-radius: 8px; }
+    #publishDialog { width: 520px; max-width: calc(100vw - 32px); border-radius: 8px; }
+    #publishDialog .publish-fields { display: grid; gap: 16px; margin: 18px 0; }
+    #publishDialog .publish-consent { display: flex; align-items: flex-start; gap: 8px; }
+    #publishDialog input[type="checkbox"] { width: 18px; min-height: 18px; margin: 2px 0; flex: 0 0 18px; }
+    #publishDialog .publish-consent span { line-height: 1.5; }
+    #publishDialog a { color: var(--green-2); overflow-wrap: anywhere; }
+    #publishProgress { white-space: pre-wrap; line-height: 1.5; margin: 12px 0; }
     #excelDialog h2 { font-size: 22px; margin-bottom: 16px; }
     #excelMapping { margin: 16px 0; }
     .import-table { overflow: auto; max-height: 260px; margin: 16px 0; }
@@ -551,6 +558,7 @@
           <button class="secondary" id="exportBtn" type="button">导出确认单</button>
           <button class="secondary" id="printBtn" type="button">打印/存 PDF</button>
           <button class="secondary" id="backupBtn" type="button">备份项目</button>
+          <button class="primary" id="publishBtn" type="button">发布</button>
           <button class="secondary" id="imageDirectoryBtn" type="button">设置图片目录</button>
           <button class="secondary" id="excelBtn" type="button">导入 Excel</button>
           <input class="hidden" id="excelFile" type="file" accept=".xlsx,.xls,.csv">
@@ -661,6 +669,20 @@
   </dialog>
 
   <script src="published-project.js"></script>
+  <dialog id="publishDialog" aria-labelledby="publishTitle">
+    <div class="editor-head"><h2 id="publishTitle">发布到 GitHub</h2><button class="secondary" id="closePublishBtn" type="button" aria-label="关闭发布">×</button></div>
+    <div class="publish-fields">
+      <div><label>仓库</label><a href="https://github.com/vince-zh/furniture-selection" target="_blank" rel="noopener noreferrer">vince-zh/furniture-selection · main</a></div>
+      <div id="publishSummary"></div>
+      <div><label for="publishToken">发布凭证</label><input id="publishToken" type="password" autocomplete="off" spellcheck="false" placeholder="github_pat_…" data-lpignore="true"></div>
+      <label class="publish-consent"><input id="publishConsent" type="checkbox"><span>公开发布当前全部家具清单、报价和图片，替换网站上的项目。</span></label>
+      <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener noreferrer">管理发布凭证</a>
+    </div>
+    <p id="publishProgress" role="status" aria-live="polite"></p>
+    <a id="publishCommitLink" class="hidden" target="_blank" rel="noopener noreferrer">查看 GitHub 提交</a>
+    <div class="editor-footer"><button class="secondary" id="cancelPublishBtn" type="button">关闭</button><button class="primary" id="submitPublishBtn" type="button">确认发布</button></div>
+  </dialog>
+  <script src="github-publish.js"></script>
   <script src="project-storage.js"></script>
   <script src="local-images.js"></script>
   <script>
@@ -770,7 +792,7 @@
         }) };
       });
       const index = value.sections.findIndex(section => section.id === value.activeSectionId);
-      return { sections, activeSectionId: sections[Math.max(0, index)].id };
+      return { sections, activeSectionId: sections[Math.max(0, index)].id, publishedRevision: String(value.publishedRevision || "initial") };
     }
 
     function saveState() {
@@ -1345,17 +1367,82 @@
     });
     el("closeImageBtn").addEventListener("click", () => el("imageDialog").close());
     el("backupBtn").addEventListener("click", () => downloadText("家具项目备份.json", JSON.stringify(state, null, 2)));
+    let publishBusy = false;
+    let publishWaiting = false;
+    el("publishBtn").addEventListener("click", () => {
+      try {
+        if (typeof GitHubPublish === "undefined") throw Error("发布组件未加载，请刷新网页。");
+        el("publishSummary").textContent = GitHubPublish.summary(state);
+        el("publishToken").value = "";
+        el("publishConsent").checked = false;
+        if (!publishWaiting) {
+          el("publishProgress").textContent = "";
+          el("publishCommitLink").classList.add("hidden");
+        }
+        el("submitPublishBtn").disabled = publishBusy || publishWaiting;
+        el("publishDialog").showModal();
+      } catch (error) { showStatus(error.message); }
+    });
+    function closePublishDialog() {
+      if (publishBusy) return;
+      el("publishToken").value = "";
+      el("publishDialog").close();
+    }
+    el("closePublishBtn").addEventListener("click", closePublishDialog);
+    el("cancelPublishBtn").addEventListener("click", closePublishDialog);
+    el("publishDialog").addEventListener("cancel", event => { event.preventDefault(); closePublishDialog(); });
+    el("publishDialog").addEventListener("close", () => { el("publishToken").value = ""; });
+    el("submitPublishBtn").addEventListener("click", async () => {
+      if (publishBusy || publishWaiting) return;
+      const progress = message => { el("publishProgress").textContent = message; };
+      if (!el("publishConsent").checked) { progress("请确认公开发布的内容。"); return; }
+      let token = el("publishToken").value.trim();
+      el("publishToken").value = "";
+      publishBusy = true;
+      for (const id of ["submitPublishBtn", "closePublishBtn", "cancelPublishBtn"]) el(id).disabled = true;
+      let published;
+      try {
+        published = await GitHubPublish.publish(structuredClone(state), token, progress);
+        state.publishedRevision = published.revision;
+        await saveState();
+        el("publishCommitLink").href = published.url;
+        el("publishCommitLink").classList.remove("hidden");
+        progress("已提交 GitHub，正在等待网站更新…");
+      } catch (error) { progress(error.message); }
+      finally {
+        token = "";
+        publishBusy = false;
+        for (const id of ["submitPublishBtn", "closePublishBtn", "cancelPublishBtn"]) el(id).disabled = false;
+      }
+      if (!published) return;
+      publishWaiting = true;
+      el("submitPublishBtn").disabled = true;
+      try {
+        const deployed = await GitHubPublish.waitForDeployment(published.revision, progress);
+        progress(deployed ? "发布完成，网站已更新。" : "GitHub 已提交，暂未确认网站更新。请查看仓库的部署状态。");
+      } finally {
+        publishWaiting = false;
+        el("submitPublishBtn").disabled = false;
+      }
+    });
     if (window.FurnitureInitialProject) {
       const publishedButton = document.createElement("button");
       publishedButton.type = "button";
       publishedButton.className = "secondary";
       publishedButton.textContent = "载入发布项目";
       el("backupBtn").after(publishedButton);
-      publishedButton.addEventListener("click", () => {
+      publishedButton.addEventListener("click", async () => {
         if (!confirm("用网站发布的项目替换当前浏览器中的项目？请先备份未保存到网站的修改。")) return;
-        state = normalizeState(window.FurnitureInitialProject);
-        clearForm();
-        render();
+        publishedButton.disabled = true;
+        try {
+          const response = await fetch(GitHubPublish.site + "published-project.js?latest=" + Date.now(), { cache: "no-store" });
+          if (!response.ok) throw Error("无法取得最新发布项目，请稍后重试。");
+          const project = normalizeState(GitHubPublish.parseSource(await response.text()));
+          state = project;
+          clearForm();
+          await render();
+        } catch (error) { showStatus(error.message); }
+        finally { publishedButton.disabled = false; }
       });
     }
     el("restoreBtn").addEventListener("click", () => el("restoreFile").click());
