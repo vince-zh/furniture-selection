@@ -30,6 +30,7 @@
       background: var(--paper);
       color: var(--ink);
       min-width: 320px;
+      overflow: hidden;
     }
 
     button, input, select, textarea {
@@ -51,9 +52,12 @@
     }
 
     .app {
-      min-height: 100vh;
+      height: 100vh;
+      height: 100dvh;
+      overflow: hidden;
       display: grid;
-      grid-template-columns: 280px minmax(0, 1fr) 340px;
+      grid-template-columns: 280px minmax(0, 1fr);
+      grid-template-rows: minmax(0, 1fr);
     }
 
     .sidebar, .quote {
@@ -65,7 +69,12 @@
 
     .sidebar {
       border-right: 1px solid rgba(255,255,255,.14);
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+      overflow: hidden;
     }
+    .sidebar > .brand, .sidebar > button { flex-shrink: 0; }
 
     .quote {
       background: #20312e;
@@ -107,6 +116,9 @@
     .main {
       padding: 24px;
       overflow: auto;
+      min-height: 0;
+      min-width: 0;
+      overscroll-behavior: contain;
     }
 
     .topbar {
@@ -162,6 +174,12 @@
       display: grid;
       gap: 12px;
       margin-top: 18px;
+      flex: 1;
+      min-height: 0;
+      overflow-y: auto;
+      overscroll-behavior: contain;
+      align-content: start;
+      scrollbar-width: thin;
     }
     .space-group { min-width: 0; }
     .space-group h3 { font-size: 15px; margin: 8px 0 10px; overflow-wrap: anywhere; }
@@ -357,9 +375,10 @@
     }
 
     .candidate-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
-    .view-switch { display: flex; gap: 0; min-width: 0; }
-    .view-switch button { border: 1px solid var(--line); padding: 0 14px; border-radius: 0; background: white; }
-    .view-switch button[aria-pressed="true"] { background: var(--green); color: white; }
+    .candidate-toolbar h3 { font-size: 16px; }
+    #quoteDialog { width: 720px; max-width: calc(100vw - 32px); max-height: calc(100dvh - 32px); border-radius: 8px; overscroll-behavior: contain; }
+    #quoteDialog .editor-head { margin-bottom: 16px; }
+    #quoteDialog .quote-row span:last-child { white-space: nowrap; flex-shrink: 0; }
     .quote-row span { min-width: 0; overflow-wrap: anywhere; }
     .total { overflow-wrap: anywhere; }
     .status { padding: 10px 16px; background: #fff0dc; color: #754a13; }
@@ -476,25 +495,23 @@
       .app {
         grid-template-columns: 230px minmax(0, 1fr);
       }
-      .quote {
-        grid-column: 1 / -1;
-        border-left: 0;
-        border-top: 1px solid rgba(255,255,255,.14);
-      }
       .quote-list {
         grid-template-columns: repeat(2, minmax(0, 1fr));
       }
     }
 
     @media (max-width: 820px) {
-      .app, .workspace {
+      .workspace {
         display: block;
       }
+      .app { grid-template-columns: 170px minmax(0, 1fr); }
       .sidebar, .main, .quote {
-        padding: 18px;
+        padding: 14px;
       }
+      .sidebar .mark { display: none; }
+      .sidebar h1 { font-size: 16px; }
       .section-list {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
+        grid-template-columns: 1fr;
       }
       .topbar {
         display: grid;
@@ -503,7 +520,7 @@
         justify-content: stretch;
       }
       .toolbar button {
-        flex: 1 1 150px;
+        flex: 1 1 100px;
       }
       .room-panel {
         margin-bottom: 16px;
@@ -511,6 +528,9 @@
     }
 
     @media (max-width: 620px) {
+      .app { grid-template-columns: 140px minmax(0, 1fr); }
+      .sidebar, .main { padding: 10px; }
+      .candidate-head { display: grid; gap: 6px; }
       .section-list, .candidate-grid, .quote-list, .form-grid {
         grid-template-columns: 1fr;
       }
@@ -523,10 +543,12 @@
     }
 
     @media print {
-      body { background: white; }
+      body { background: white; overflow: visible; }
       .sidebar, .toolbar, .add-form, .add-candidate, .actions, input[type="file"] { display: none !important; }
-      .app { display: block; }
-      .main, .quote { color: #111; background: white; padding: 0; }
+      .app { display: block; height: auto; overflow: visible; }
+      .main, .quote { color: #111; background: white; padding: 0; overflow: visible; }
+      #quoteDialog { display: block !important; position: static; width: auto; max-width: none; max-height: none; height: auto; margin: 18px 0 0; }
+      #quoteDialog .editor-head button, #quoteDialog > button { display: none; }
       .panel, .candidate, .quote-item { box-shadow: none; break-inside: avoid; }
       .quote { margin-top: 18px; border: 0; }
       .total { color: #111; }
@@ -557,6 +579,7 @@
         <div class="toolbar">
           <button class="secondary" id="exportBtn" type="button">导出确认单</button>
           <button class="secondary" id="printBtn" type="button">打印/存 PDF</button>
+          <button class="secondary" id="quoteBtn" type="button">查看报价</button>
           <button class="secondary" id="backupBtn" type="button">备份项目</button>
           <button class="primary" id="publishBtn" type="button">发布</button>
           <button class="secondary" id="imageDirectoryBtn" type="button">设置图片目录</button>
@@ -593,10 +616,7 @@
 
         <div>
           <div class="candidate-toolbar">
-          <div class="view-switch" aria-label="对比视图">
-            <button type="button" id="productView" aria-pressed="true">商品图</button>
-            <button type="button" id="sceneView" aria-pressed="false">场景效果图</button>
-          </div>
+          <h3>候选家具</h3>
           <button class="secondary add-candidate" id="showAddFormBtn" type="button" aria-label="添加候选家具" title="添加候选家具" aria-expanded="false" aria-controls="candidateForm"><span aria-hidden="true">+</span></button>
           </div>
           <div class="candidate-grid" id="candidateGrid"></div>
@@ -619,9 +639,6 @@
             </label>
             <button class="secondary" id="pasteItemBtn" type="button">粘贴商品图</button>
             <div id="itemImagePreview" class="image-preview hidden"></div>
-            <label>场景效果图<input id="itemScene" type="file" accept="image/*" multiple></label>
-            <button class="secondary" id="pasteSceneBtn" type="button">粘贴场景图</button>
-            <div id="itemScenePreview" class="image-preview hidden"></div>
             <label>
               说明
               <textarea id="itemNotes" placeholder="交期、安装、是否含运费、设计师意见等"></textarea>
@@ -636,15 +653,15 @@
       </section>
     </main>
 
-    <aside class="quote">
+  </div>
+    <dialog class="quote" id="quoteDialog" aria-labelledby="quoteTitle">
+      <div class="editor-head"><h2 id="quoteTitle">总体报价</h2><button class="secondary" id="closeQuoteBtn" type="button" aria-label="关闭报价">×</button></div>
       <span class="pill" id="confirmedCount">0 项已确认</span>
-      <h2>总体报价</h2>
       <p class="subtle" id="quoteProgress"></p>
       <div class="total" id="quoteTotal">¥0</div>
       <button class="secondary" id="copyBtn" type="button">复制确认清单</button>
       <div class="quote-list" id="quoteList"></div>
-    </aside>
-  </div>
+    </dialog>
   <dialog id="imageDialog"><button id="closeImageBtn" class="secondary" type="button">关闭</button><img id="largeImage" alt="图片预览"></dialog>
   <dialog id="pasteDialog" aria-labelledby="pasteTitle">
     <h2 id="pasteTitle">粘贴图片</h2>
@@ -748,11 +765,10 @@
 
     let state = loadState();
     let editingId = null;
-    let viewMode = "product";
     let pasteTarget = null;
     let formPasteTarget = null;
     let formRevision = 0;
-    let formImages = { image: [], scene: [] };
+    let formImages = { image: [] };
     const imageIndexes = new Map();
     let projectStore = null;
     let saveQueue = Promise.resolve();
@@ -980,14 +996,14 @@
 
       el("candidateGrid").innerHTML = section.items.map((item) => {
         const lineTotal = itemTotal(item);
-        const pictures = itemImages(item, viewMode === "scene" ? "scene" : "image");
-        const imageKey = `${section.id}:${item.id}:${viewMode}`;
+        const pictures = itemImages(item, "image");
+        const imageKey = `${section.id}:${item.id}:product`;
         const imageIndex = Math.min(imageIndexes.get(imageKey) || 0, Math.max(0, pictures.length - 1));
         const photo = pictures[imageIndex];
         return `
           <article class="candidate ${item.selected ? "selected" : ""}">
             <div class="candidate-photo">
-              ${validImage(photo) ? `<img src="${escapeHtml(photo)}" alt="${escapeHtml(item.name)}">` : (viewMode === "scene" ? "尚未上传场景效果图" : "尚未上传商品图")}
+              ${validImage(photo) ? `<img src="${escapeHtml(photo)}" alt="${escapeHtml(item.name)}">` : "尚未上传商品图"}
               <button class="photo-edit" type="button" data-edit="${item.id}" title="编辑方案" aria-label="编辑${escapeHtml(item.name)}"><img src="pencil.svg" alt="" aria-hidden="true"></button>
             </div>
             ${pictures.length > 1 ? `<div class="photo-pager"><button type="button" data-page="${item.id}" data-step="-1" aria-label="上一张" title="上一张">‹</button><span>${imageIndex + 1} / ${pictures.length}</span><button type="button" data-page="${item.id}" data-step="1" aria-label="下一张" title="下一张">›</button></div>` : ""}
@@ -1009,8 +1025,8 @@
 
       document.querySelectorAll("[data-page]").forEach(button => button.addEventListener("click", () => {
         const item = section.items.find(item => item.id === button.dataset.page);
-        const count = itemImages(item, viewMode === "scene" ? "scene" : "image").length;
-        const key = `${section.id}:${item.id}:${viewMode}`;
+        const count = itemImages(item, "image").length;
+        const key = `${section.id}:${item.id}:product`;
         imageIndexes.set(key, ((imageIndexes.get(key) || 0) + Number(button.dataset.step) + count) % count);
         renderCandidates(section);
       }));
@@ -1033,7 +1049,7 @@
         editingId = item.id;
         for (const [field, key] of Object.entries(formFields)) el(field).value = item[key] ?? (key === "qty" ? 1 : "");
         el("itemPrice").value = goodsTotal(item);
-        formImages = { image: itemImages(item, "image"), scene: itemImages(item, "scene") };
+        formImages = { image: itemImages(item, "image") };
         renderFormImages();
         el("deleteItemBtn").classList.remove("hidden");
         el("formTitle").textContent = "修改候选家具";
@@ -1146,7 +1162,7 @@
       el("addItemBtn").disabled = true;
       const fields = Object.fromEntries(Object.entries(formFields).map(([id, key]) => [key, el(id).value]));
       const images = [...formImages.image];
-      const sceneImages = [...formImages.scene];
+      const sceneImages = existing ? itemImages(existing, "scene") : [];
       try {
       const image = images[0] || "";
       const scene = sceneImages[0] || "";
@@ -1174,8 +1190,8 @@
       editingId = null;
       formPasteTarget = null;
       formRevision++;
-      formImages = { image: [], scene: [] };
-      for (const id of ["itemImagePreview", "itemScenePreview"]) { el(id).innerHTML = ""; el(id).classList.add("hidden"); }
+      formImages = { image: [] };
+      for (const id of ["itemImagePreview"]) { el(id).innerHTML = ""; el(id).classList.add("hidden"); }
       el("candidateForm").classList.add("hidden");
       if (el("candidateForm").open) el("candidateForm").close();
       el("deleteItemBtn").classList.add("hidden");
@@ -1184,7 +1200,6 @@
       el("showAddFormBtn").setAttribute("aria-expanded", "false");
       Object.keys(formFields).forEach(id => el(id).value = id === "itemQty" ? "1" : "");
       el("itemImage").value = "";
-      el("itemScene").value = "";
       el("formTitle").textContent = "新增候选家具";
       el("addItemBtn").textContent = "加入对比";
       el("cancelEditBtn").textContent = "取消";
@@ -1208,7 +1223,7 @@
     });
 
     function renderFormImages() {
-      for (const [field, id] of [["image", "itemImagePreview"], ["scene", "itemScenePreview"]]) {
+      for (const [field, id] of [["image", "itemImagePreview"]]) {
         el(id).innerHTML = formImages[field].map((image, index) => `<div class="gallery-image"><img src="${image}" alt="${field === "image" ? "商品" : "场景"}图片 ${index + 1}"><button type="button" data-remove-image="${field}" data-image-index="${index}" aria-label="移除图片 ${index + 1}" title="移除图片">×</button></div>`).join("");
         el(id).classList[formImages[field].length ? "remove" : "add"]("hidden");
       }
@@ -1223,13 +1238,12 @@
       if (!image) throw new Error("剪贴板中没有图片。");
       const section = state.sections.find(section => section.id === target.sectionId);
       if (!section) throw new Error("该位置已删除。");
-      if (target.kind === "form" && (target.revision !== formRevision || activeSection().id !== target.sectionId)) throw new Error("候选表单已更改，请重新粘贴。");
+      if (target.kind === "form" && (target.field !== "image" || target.revision !== formRevision || activeSection().id !== target.sectionId)) throw new Error("候选表单已更改，请重新粘贴。");
       if (typeof LocalImages !== "undefined") await LocalImages.save(image);
       if (target.kind === "form") {
         if (target.revision !== formRevision || activeSection().id !== target.sectionId) throw new Error("候选表单已更改，请重新粘贴。");
         formImages[target.field].push(image);
-        const inputId = target.field === "image" ? "itemImage" : "itemScene";
-        el(inputId).value = "";
+        el("itemImage").value = "";
         renderFormImages();
       } else if (target.kind === "room") {
         section.image = image;
@@ -1322,18 +1336,18 @@
           if (validImage(section.image)) images.add(section.image);
           for (const item of section.items) for (const field of ["image", "scene"]) itemImages(item, field).forEach(image => images.add(image));
         }
-        for (const field of ["image", "scene"]) formImages[field].forEach(image => images.add(image));
+        formImages.image.forEach(image => images.add(image));
         for (const image of images) await LocalImages.save(image);
         showStatus(`图片目录：${name}，已有 ${images.size} 张图片已保存到本地。`);
       } catch (error) { if (error.name !== "AbortError") showStatus("本地图片保存失败：" + error.message); }
       finally { el("imageDirectoryBtn").disabled = false; }
     });
-    for (const [id, field] of [["pasteItemBtn", "image"], ["pasteSceneBtn", "scene"]]) el(id).addEventListener("click", () => beginImagePaste({ kind: "form", sectionId: activeSection().id, revision: formRevision, field }));
+    el("pasteItemBtn").addEventListener("click", () => beginImagePaste({ kind: "form", sectionId: activeSection().id, revision: formRevision, field: "image" }));
     let uploadingCount = 0;
-    for (const id of ["itemImage", "itemScene"]) el(id).addEventListener("change", async event => {
+    for (const id of ["itemImage"]) el(id).addEventListener("change", async event => {
       const files = Array.from(event.target.files || []);
       const revision = formRevision;
-      const field = id === "itemImage" ? "image" : "scene";
+      const field = "image";
       uploadingCount++;
       el("addItemBtn").disabled = true;
       try {
@@ -1353,12 +1367,8 @@
       state.sections = state.sections.filter(section => section.id !== activeSection().id);
       clearForm(); render();
     });
-    for (const mode of ["product", "scene"]) el(mode + "View").addEventListener("click", () => {
-      viewMode = mode;
-      el("productView").setAttribute("aria-pressed", String(mode === "product"));
-      el("sceneView").setAttribute("aria-pressed", String(mode === "scene"));
-      renderCandidates(activeSection());
-    });
+    el("quoteBtn").addEventListener("click", () => { renderQuote(); el("quoteDialog").showModal(); });
+    el("closeQuoteBtn").addEventListener("click", () => el("quoteDialog").close());
     document.addEventListener("click", event => {
       if (event.target.matches(".candidate-photo > img, .room-image img")) {
         el("largeImage").src = event.target.src;
