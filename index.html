@@ -418,9 +418,14 @@
     .editor-footer { flex-wrap: wrap; }
     .editor-footer .danger { margin-right: auto; }
     .image-preview { display: flex; flex-wrap: wrap; gap: 8px; }
-    .gallery-image { position: relative; width: 100px; height: 90px; background: var(--panel-2); }
-    .gallery-image img { width: 100%; height: 100%; }
-    .gallery-image button { position: absolute; top: 2px; right: 2px; width: 24px; height: 24px; min-height: 24px; padding: 0; background: white; font-size: 18px; }
+    .gallery-image { position: relative; width: 120px; flex: 0 0 120px; background: var(--panel-2); border: 1px solid var(--line); border-radius: 4px; overflow: hidden; }
+    .gallery-image > img { display: block; width: 100%; height: 90px; object-fit: contain; }
+    .gallery-image .gallery-remove { position: absolute; top: 2px; right: 2px; width: 24px; height: 24px; min-height: 24px; padding: 0; background: white; font-size: 18px; }
+    .gallery-order { display: flex; align-items: center; justify-content: space-between; min-height: 32px; padding: 2px 4px; background: white; border-top: 1px solid var(--line); }
+    .gallery-order span { font-size: 11px; color: var(--muted); white-space: nowrap; }
+    .gallery-order button { display: grid; place-items: center; width: 24px; height: 28px; min-height: 28px; padding: 0; border: 0; background: transparent; }
+    .gallery-order button img { width: 16px; height: 16px; }
+    .gallery-order button:disabled { opacity: .3; cursor: default; transform: none; }
     #pasteZone { width: min(70vw, 420px); min-height: 140px; border: 1px dashed var(--line); padding: 20px; margin: 14px 0; }
     .candidate-photo, .room-image { cursor: zoom-in; }
     .candidate-photo img, .room-image img { min-height: 0; }
@@ -1161,6 +1166,7 @@
       };
       if (existing) Object.assign(existing, item);
       else section.items.push(item);
+      imageIndexes.set(`${section.id}:${item.id}:product`, 0);
       clearForm();
       render();
       } catch (error) { showStatus(error.message); }
@@ -1206,12 +1212,23 @@
 
     function renderFormImages() {
       for (const [field, id] of [["image", "itemImagePreview"]]) {
-        el(id).innerHTML = formImages[field].map((image, index) => `<div class="gallery-image"><img src="${image}" alt="${field === "image" ? "商品" : "场景"}图片 ${index + 1}"><button type="button" data-remove-image="${field}" data-image-index="${index}" aria-label="移除图片 ${index + 1}" title="移除图片">×</button></div>`).join("");
+        el(id).innerHTML = formImages[field].map((image, index) => `<div class="gallery-image"><img src="${escapeHtml(image)}" alt="商品图片 ${index + 1}"><button class="gallery-remove" type="button" data-remove-image="${field}" data-image-index="${index}" aria-label="移除图片 ${index + 1}" title="移除图片">×</button><div class="gallery-order"><span>${index === 0 ? "首图" : index + 1}</span>${[["first", "image-first.svg", "设为首图", index === 0], ["previous", "chevron-left.svg", "前移", index === 0], ["next", "chevron-right.svg", "后移", index === formImages[field].length - 1]].map(([action, icon, label, disabled]) => `<button type="button" data-order-image="${field}" data-image-index="${index}" data-image-action="${action}" aria-label="${label}图片 ${index + 1}" title="${label}" ${disabled ? "disabled" : ""}><img src="${icon}" alt="" aria-hidden="true"></button>`).join("")}</div></div>`).join("");
         el(id).classList[formImages[field].length ? "remove" : "add"]("hidden");
       }
       document.querySelectorAll("[data-remove-image]").forEach(button => button.addEventListener("click", () => {
         formImages[button.dataset.removeImage].splice(Number(button.dataset.imageIndex), 1);
         renderFormImages();
+      }));
+      document.querySelectorAll("[data-order-image]").forEach(button => button.addEventListener("click", () => {
+        const field = button.dataset.orderImage;
+        const index = Number(button.dataset.imageIndex);
+        const action = button.dataset.imageAction;
+        const next = action === "first" ? 0 : index + (action === "previous" ? -1 : 1);
+        if (index < 0 || index >= formImages[field].length || next < 0 || next >= formImages[field].length || next === index) return;
+        const [image] = formImages[field].splice(index, 1);
+        formImages[field].splice(next, 0, image);
+        renderFormImages();
+        el("itemImagePreview").querySelector(`[data-image-index="${next}"][data-image-action="${action}"]`)?.focus();
       }));
     }
 
