@@ -417,6 +417,14 @@
     .editor-head button { width: 36px; padding: 0; font-size: 24px; }
     .editor-footer { flex-wrap: wrap; }
     .editor-footer .danger { margin-right: auto; }
+    body.project-loading .app { visibility: hidden; }
+    #projectLoader { position: fixed; inset: 0; z-index: 1000; background: #f7f9f8; display: grid; place-items: center; padding: 24px; }
+    #projectLoader.hidden { display: none; }
+    .loader-content { width: min(420px, 100%); }
+    .loader-content h2 { font-size: 22px; margin-bottom: 16px; }
+    #projectProgress { width: 100%; height: 8px; accent-color: var(--green); }
+    #loaderMessage { color: var(--muted); overflow-wrap: anywhere; margin: 12px 0; }
+    #recoveryNotice { margin: 12px 0; padding: 10px 0; border-bottom: 1px solid var(--line); font-size: 13px; }
     .image-preview { display: flex; flex-wrap: wrap; gap: 8px; }
     .gallery-image { position: relative; width: 120px; flex: 0 0 120px; background: var(--panel-2); border: 1px solid var(--line); border-radius: 4px; overflow: hidden; }
     .gallery-image > img { display: block; width: 100%; height: 90px; object-fit: contain; }
@@ -563,7 +571,8 @@
     }
   </style>
 </head>
-<body>
+<body class="project-loading">
+  <div id="projectLoader" role="status" aria-live="polite"><div class="loader-content"><h2>家具项目</h2><progress id="projectProgress" max="100" aria-label="项目加载进度"></progress><p id="loaderMessage">正在载入最新发布版本…</p><button id="retryLoadBtn" class="secondary hidden" type="button">重新加载</button><button id="useLocalBtn" class="secondary hidden" type="button">打开本地版本</button></div></div>
   <div class="app">
     <aside class="sidebar">
       <div class="brand">
@@ -622,6 +631,7 @@
           <h3>候选家具</h3>
           <button class="secondary add-candidate" id="showAddFormBtn" type="button" aria-label="添加候选家具" title="添加候选家具" aria-expanded="false" aria-controls="candidateForm"><span aria-hidden="true">+</span></button>
           </div>
+          <div id="recoveryNotice" class="hidden">本地未发布内容已保留。<button id="restoreRecoveryBtn" class="secondary" type="button">恢复本地草稿</button></div>
           <div class="candidate-grid" id="candidateGrid"></div>
           <dialog class="add-form hidden" id="candidateForm" aria-labelledby="formTitle">
             <div class="editor-head"><h3 id="formTitle">新增候选家具</h3><button class="secondary" id="closeCandidateBtn" type="button" title="关闭" aria-label="关闭">×</button></div>
@@ -689,6 +699,7 @@
   <script src="github-publish.js"></script>
   <script src="project-storage.js"></script>
   <script src="local-images.js"></script>
+  <script src="published-loader.js"></script>
   <script>
     const storageKey = "furniture-selector-v1";
 
@@ -820,7 +831,88 @@
       }
     }
 
+    function updateLoadProgress(value, message) {
+      if (value === null) el("projectProgress").removeAttribute("value");
+      else el("projectProgress").value = value;
+      el("loaderMessage").textContent = message;
+    }
     async function initializeStorage() {
+      if (typeof PublishedLoader === "undefined") {
+        if (!document.body) return initializeLocalStorage();
+        updateLoadProgress(null, "加载组件未能下载，请刷新重试。");
+        el("retryLoadBtn").classList.remove("hidden");
+        el("retryLoadBtn").onclick = () => location.reload();
+        return;
+      }
+      const app = document.querySelector(".app");
+      app.inert = true;
+      let local = null;
+      try {
+        if (typeof FurnitureStorage !== "undefined") {
+          local = await FurnitureStorage.load();
+          projectStore = FurnitureStorage;
+        }
+        if (!local) {
+          const legacy = localStorage.getItem(storageKey);
+          if (legacy) local = JSON.parse(legacy);
+        }
+      } catch (error) { projectStore = null; }
+      const enter = async project => {
+        state = normalizeState(project);
+        updateLoadProgress(96, "正在准备图片…");
+        const saved = await render();
+        await Promise.all(Array.from(app.querySelectorAll("img")).map(img => new Promise(resolve => {
+          if (img.complete) return resolve();
+          const timeout = setTimeout(resolve, 10000);
+          const done = () => { clearTimeout(timeout); resolve(); };
+          img.addEventListener("load", done, {once: true});
+          img.addEventListener("error", done, {once: true});
+        })));
+        if (saved !== false && projectStore) try { localStorage.removeItem(storageKey); } catch {}
+        updateLoadProgress(100, "加载完成");
+        document.body.classList.remove("project-loading");
+        el("projectLoader").classList.add("hidden");
+        app.inert = false;
+        return saved;
+      };
+      const attempt = async () => {
+        el("retryLoadBtn").classList.add("hidden");
+        el("useLocalBtn").classList.add("hidden");
+        try {
+          const latest = normalizeState(await PublishedLoader.fetchProject(updateLoadProgress));
+          const hash = await PublishedLoader.fingerprint(latest);
+          if (local && projectStore) {
+            const localHash = await PublishedLoader.fingerprint(normalizeState(local));
+            const baseline = await projectStore.loadSyncBaseline();
+            if (localHash !== hash && localHash !== baseline) await projectStore.saveRecovery(local);
+          } else if (local && !projectStore) {
+            throw Error("无法保存本地备份，已保留原内容。请打开本地版本并导出 Excel 后重试。");
+          }
+          const saved = await enter(latest);
+          if (projectStore && saved !== false) await projectStore.saveSyncBaseline(hash);
+          if (typeof LocalImages !== "undefined") {
+            try { await LocalImages.restore(); if (LocalImages.name) el("imageDirectoryBtn").title = LocalImages.name; } catch {}
+          }
+          if (projectStore && await projectStore.loadRecovery()) el("recoveryNotice").classList.remove("hidden");
+        } catch (error) {
+          if (!el("projectLoader").classList.contains("hidden")) {
+            updateLoadProgress(null, "最新项目加载失败：" + error.message);
+            el("retryLoadBtn").classList.remove("hidden");
+            if (local) el("useLocalBtn").classList.remove("hidden");
+          } else showStatus("已显示项目，但本地保存未完成：" + error.message);
+        }
+      };
+      el("retryLoadBtn").onclick = attempt;
+      el("useLocalBtn").onclick = async () => { await enter(local); showStatus("当前为本地版本，尚未同步最新发布项目。"); };
+      el("restoreRecoveryBtn").onclick = async () => {
+        if (!confirm("恢复本地未发布草稿？当前最新发布版本可随时重新载入。")) return;
+        const recovery = await projectStore.loadRecovery();
+        if (recovery) { state = normalizeState(recovery); clearForm(); await render(); showStatus("已恢复本地草稿，请核对最新版本后再发布。"); }
+      };
+      await attempt();
+    }
+
+    async function initializeLocalStorage() {
       if (typeof FurnitureStorage === "undefined") { render(); return; }
       const app = document.querySelector(".app");
       app.inert = true;

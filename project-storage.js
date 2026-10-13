@@ -28,6 +28,10 @@ const FurnitureStorage = (() => {
   return {
     load: () => transaction("readonly", store => store.get("current")),
     save: project => transaction("readwrite", store => store.put(project, "current")),
+    loadSyncBaseline: () => transaction("readonly", store => store.get("sync-baseline")),
+    saveSyncBaseline: hash => transaction("readwrite", store => store.put(hash, "sync-baseline")),
+    loadRecovery: () => transaction("readonly", store => store.get("unpublished-recovery")),
+    saveRecovery: project => transaction("readwrite", store => store.put(project, "unpublished-recovery")),
     loadImageDirectory: () => transaction("readonly", store => store.get("image-directory")),
     saveImageDirectory: handle => transaction("readwrite", store => store.put(handle, "image-directory"))
   };
