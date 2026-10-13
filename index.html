@@ -682,7 +682,6 @@
     <div id="pasteZone" tabindex="0" role="textbox" aria-label="图片粘贴区域" contenteditable="true">图片粘贴区域</div>
     <button class="secondary" id="cancelPasteBtn" type="button">取消</button>
   </dialog>
-  <script src="published-project.js"></script>
   <dialog id="publishDialog" aria-labelledby="publishTitle">
     <div class="editor-head"><h2 id="publishTitle">发布到 GitHub</h2><button class="secondary" id="closePublishBtn" type="button" aria-label="关闭发布">×</button></div>
     <div class="publish-fields">
@@ -783,9 +782,9 @@
     function loadState() {
       try {
         const saved = localStorage.getItem(storageKey);
-        return saved ? normalizeState(JSON.parse(saved)) : normalizeState(window.FurnitureInitialProject || sampleState);
+        return saved ? normalizeState(JSON.parse(saved)) : structuredClone(sampleState);
       } catch {
-        return normalizeState(window.FurnitureInitialProject || sampleState);
+        return structuredClone(sampleState);
       }
     }
 
