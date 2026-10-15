@@ -227,14 +227,31 @@
 
     .workspace {
       display: grid;
-      grid-template-columns: minmax(280px, 38%) minmax(0, 1fr);
+      grid-template-columns: minmax(0, 1fr);
       gap: 18px;
       align-items: start;
     }
 
     .room-panel {
-      overflow: hidden;
+      width: 680px;
+      max-width: calc(100vw - 32px);
+      max-height: calc(100dvh - 32px);
+      overflow: auto;
+      overscroll-behavior: contain;
     }
+    .room-panel .editor-head { margin-bottom: 12px; }
+    .candidate-tools { display: flex; align-items: center; gap: 8px; }
+    .compare-choice { display: inline-flex; align-items: center; gap: 6px; color: var(--ink); }
+    .compare-choice input { width: 18px; min-height: 18px; margin: 0; }
+    #compareDialog { width: 1150px; border-radius: 8px; }
+    .comparison-scroll { overflow-x: auto; }
+    .comparison-table { width: 100%; min-width: 520px; table-layout: fixed; border-collapse: collapse; }
+    .comparison-table td { width: 50%; vertical-align: top; border: 1px solid var(--line); padding: 12px; overflow-wrap: anywhere; }
+    .comparison-table td > small { display: block; color: var(--muted); margin-bottom: 8px; }
+    .comparison-table .candidate-photo img { max-height: none; }
+    .candidate-toolbar { flex-wrap: wrap; }
+    .section-settings { width: 40px; height: 40px; padding: 10px; flex: 0 0 40px; }
+    .section-settings img { width: 18px; height: 18px; display: block; }
 
     .room-image {
       aspect-ratio: 4 / 3;
@@ -590,7 +607,7 @@
       <div class="topbar">
         <div>
           <h2 id="roomTitle">客厅 · 沙发</h2>
-          <p id="roomSummary">上传设计效果图，粘贴淘宝链接，比较尺寸、材质、颜色、总价和数量。</p>
+          <p id="roomSummary"></p>
         </div>
         <div class="toolbar">
           <button class="secondary cart-button" id="quoteBtn" type="button" title="购物车 · 查看总报价"><img src="shopping-cart.svg" alt="" aria-hidden="true">查看总报价</button>
@@ -605,7 +622,8 @@
 
       <p id="status" class="status hidden" role="status"></p>
       <section class="workspace">
-        <div class="panel room-panel">
+        <dialog class="panel room-panel" id="sectionDialog" aria-labelledby="sectionDialogTitle">
+          <div class="editor-head"><h3 id="sectionDialogTitle">原图与位置设置</h3><button class="secondary" id="closeSectionBtn" type="button" aria-label="关闭位置设置" title="关闭">×</button></div>
           <div class="room-image" id="roomImage"></div>
           <div class="panel-body">
             <label>空间<input id="sectionRoom" autocomplete="off" placeholder="例如：客厅"></label>
@@ -624,12 +642,16 @@
             </label>
             <button class="danger" id="deleteSectionBtn" type="button">删除此位置</button>
           </div>
-        </div>
+        </dialog>
 
         <div>
           <div class="candidate-toolbar">
-          <h3>候选家具</h3>
+          <h3>方案对比</h3>
+          <div class="candidate-tools">
+          <button class="secondary" id="compareBtn" type="button" disabled>对比（0/2）</button>
+          <button class="secondary section-settings" id="sectionSettingsBtn" type="button" aria-label="原图与位置设置" title="原图与位置设置"><img src="pencil.svg" alt="" aria-hidden="true"></button>
           <button class="secondary add-candidate" id="showAddFormBtn" type="button" aria-label="添加候选家具" title="添加候选家具" aria-expanded="false" aria-controls="candidateForm"><span aria-hidden="true">+</span></button>
+          </div>
           </div>
           <div id="recoveryNotice" class="hidden">本地未发布内容已保留。<button id="restoreRecoveryBtn" class="secondary" type="button">恢复本地草稿</button></div>
           <div class="candidate-grid" id="candidateGrid"></div>
@@ -675,6 +697,10 @@
       <button class="secondary" id="copyBtn" type="button">复制确认清单</button>
       <div class="quote-list" id="quoteList"></div>
     </dialog>
+  <dialog id="compareDialog" aria-labelledby="compareTitle">
+    <div class="editor-head"><h3 id="compareTitle">产品对比</h3><button class="secondary" id="closeCompareBtn" type="button" aria-label="关闭对比">×</button></div>
+    <div class="comparison-scroll" id="comparisonContent"></div>
+  </dialog>
   <dialog id="imageDialog"><button id="closeImageBtn" class="secondary" type="button">关闭</button><img id="largeImage" alt="图片预览"></dialog>
   <dialog id="pasteDialog" aria-labelledby="pasteTitle">
     <h2 id="pasteTitle">粘贴图片</h2>
@@ -767,6 +793,8 @@
     let formRevision = 0;
     let formImages = { image: [] };
     const imageIndexes = new Map();
+    let comparisonSectionId = null;
+    let comparisonIds = [];
     let projectStore = null;
     let saveQueue = Promise.resolve();
     let saveRevision = 0;
@@ -860,7 +888,7 @@
         state = normalizeState(project);
         updateLoadProgress(96, "正在准备图片…");
         const saved = await render();
-        await Promise.all(Array.from(app.querySelectorAll("img")).map(img => new Promise(resolve => {
+        await Promise.all(Array.from(app.querySelectorAll("img")).filter(img => !img.closest?.("dialog:not([open])")).map(img => new Promise(resolve => {
           if (img.complete) return resolve();
           const timeout = setTimeout(resolve, 10000);
           const done = () => { clearTimeout(timeout); resolve(); };
@@ -1056,17 +1084,22 @@
 
     function renderRoom(section) {
       el("roomTitle").textContent = section.name;
-      el("roomSummary").textContent = section.notes || "上传效果图，记录候选家具，确认最终选择。";
+      el("roomSummary").textContent = `${section.items.length} 个候选 · ${section.items.some(item => item.selected) ? "已确认选择" : "待确认"}`;
       el("sectionRoom").value = sectionLocation(section).room;
       el("sectionName").value = sectionLocation(section).position;
       el("sectionNotes").value = section.notes;
       el("roomImage").innerHTML = validImage(section.image)
-        ? `<img src="${escapeHtml(section.image)}" alt="${escapeHtml(section.name)}效果图">`
+        ? `<img loading="lazy" src="${escapeHtml(section.image)}" alt="${escapeHtml(section.name)}效果图">`
         : `<div class="empty-image"><strong>设计效果图</strong><span>尚未上传</span></div>`;
       el("sectionImage").value = "";
     }
 
     function renderCandidates(section) {
+      if (comparisonSectionId !== section.id) comparisonIds = [];
+      comparisonSectionId = section.id;
+      comparisonIds = comparisonIds.filter(id => section.items.some(item => item.id === id));
+      el("compareBtn").textContent = `对比（${comparisonIds.length}/2）`;
+      el("compareBtn").disabled = comparisonIds.length !== 2;
       if (!section.items.length) {
         el("candidateGrid").innerHTML = `<div class="empty-state">暂无候选方案</div>`;
         return;
@@ -1095,11 +1128,18 @@
               <div class="meta">家具总价 ${money(goodsTotal(item))} · 运费 ${money(item.shipping)} · 安装 ${money(item.installation)}</div>
               <div class="actions">
                 <button class="primary" type="button" data-select="${item.id}">${item.selected ? "取消确认" : "确认此项"}</button>
+                <label class="compare-choice"><input type="checkbox" data-compare="${item.id}" ${comparisonIds.includes(item.id) ? "checked" : comparisonIds.length === 2 ? "disabled" : ""}>加入对比</label>
               </div>
             </div>
           </article>
         `;
       }).join("");
+
+      document.querySelectorAll("[data-compare]").forEach(input => input.addEventListener("change", () => {
+        if (input.checked && comparisonIds.length < 2) comparisonIds.push(input.dataset.compare);
+        else comparisonIds = comparisonIds.filter(id => id !== input.dataset.compare);
+        renderCandidates(section);
+      }));
 
       document.querySelectorAll("[data-page]").forEach(button => button.addEventListener("click", () => {
         const item = section.items.find(item => item.id === button.dataset.page);
@@ -1121,6 +1161,50 @@
         openCandidateEditor(item);
       }));
     }
+
+    function renderComparison() {
+      const section = activeSection();
+      const items = comparisonIds.map(id => section.items.find(item => item.id === id)).filter(Boolean);
+      if (items.length !== 2) { el("compareDialog").close(); return; }
+      const rows = [
+        ["", item => {
+          const pictures = itemImages(item, "image");
+          const key = `${section.id}:${item.id}:compare`;
+          const index = Math.min(imageIndexes.get(key) || 0, Math.max(0, pictures.length - 1));
+          return `<div class="candidate-photo">${validImage(pictures[index]) ? `<img src="${escapeHtml(pictures[index])}" alt="${escapeHtml(item.name)}">` : "尚未上传图片"}</div>${pictures.length > 1 ? `<div class="photo-pager"><button type="button" data-compare-page="${item.id}" data-step="-1" aria-label="上一张">‹</button><span>${index + 1} / ${pictures.length}</span><button type="button" data-compare-page="${item.id}" data-step="1" aria-label="下一张">›</button></div>` : ""}`;
+        }],
+        ["产品", item => /^https?:\/\//i.test(item.url) ? `<a href="${escapeHtml(item.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(item.name)}</a>` : escapeHtml(item.name)],
+        ["合计", item => `<strong class="price">${money(itemTotal(item))}</strong>`],
+        ["尺寸", item => escapeHtml(item.size || "未填写")],
+        ["颜色 / 材质", item => escapeHtml(item.spec || "未填写")],
+        ["数量", item => String(Number(item.qty || 1))],
+        ["家具总价", item => money(goodsTotal(item))],
+        ["运费 / 安装", item => `${money(item.shipping)} / ${money(item.installation)}`],
+        ["说明", item => escapeHtml(item.notes || "暂无说明")],
+        ["", item => `<button class="${item.selected ? "secondary" : "primary"}" type="button" data-compare-confirm="${item.id}">${item.selected ? "取消确认" : "确认此项"}</button>`]
+      ];
+      el("comparisonContent").innerHTML = `<table class="comparison-table" aria-label="两款产品对比"><tbody>${rows.map(([label, content]) => `<tr>${items.map(item => `<td>${label ? `<small>${label}</small>` : ""}${content(item)}</td>`).join("")}</tr>`).join("")}</tbody></table>`;
+      el("comparisonContent").querySelectorAll("[data-compare-page]").forEach(button => button.addEventListener("click", () => {
+        const item = items.find(item => item.id === button.dataset.comparePage);
+        const count = itemImages(item, "image").length;
+        const key = `${section.id}:${item.id}:compare`;
+        imageIndexes.set(key, ((imageIndexes.get(key) || 0) + Number(button.dataset.step) + count) % count);
+        renderComparison();
+      }));
+      el("comparisonContent").querySelectorAll("[data-compare-confirm]").forEach(button => button.addEventListener("click", () => {
+        const item = items.find(item => item.id === button.dataset.compareConfirm);
+        const selected = item.selected;
+        section.items.forEach(candidate => candidate.selected = !selected && candidate.id === item.id);
+        render();
+        renderComparison();
+      }));
+    }
+    el("compareBtn").addEventListener("click", () => {
+      if (comparisonIds.length !== 2) return;
+      renderComparison();
+      el("compareDialog").showModal();
+    });
+    el("closeCompareBtn").addEventListener("click", () => el("compareDialog").close());
 
     function openCandidateEditor(item) {
         clearForm();
@@ -1216,8 +1300,14 @@
 
     el("sectionNotes").addEventListener("input", (event) => {
       activeSection().notes = event.target.value;
-      el("roomSummary").textContent = event.target.value;
       saveState();
+    });
+
+    el("sectionSettingsBtn").addEventListener("click", () => {
+      el("sectionDialog").showModal();
+    });
+    el("closeSectionBtn").addEventListener("click", () => {
+      el("sectionDialog").close();
     });
 
     el("sectionImage").addEventListener("change", async (event) => {
@@ -1454,6 +1544,7 @@
     });
     el("deleteSectionBtn").addEventListener("click", () => {
       if (!confirm(`删除“${activeSection().name}”及其候选家具？`)) return;
+      el("sectionDialog").close();
       state.sections = state.sections.filter(section => section.id !== activeSection().id);
       clearForm(); render();
     });
